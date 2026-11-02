@@ -92,3 +92,6 @@ bin/
 .recommenders/
 application-local.properties
 application-secret.properties
+
+.angular/
+!.mvn/wrapper/maven-wrapper.jar
