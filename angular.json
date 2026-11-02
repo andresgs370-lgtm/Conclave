@@ -69,19 +69,5 @@
         }
       }
     }
-  },"schematics": {
-  "@schematics/angular:component": {
-    "standalone": false,
-    "module": "app"
-  },
-  "@schematics/angular:directive": {
-    "standalone": false,
-    "module": "app"
-  },
-  "@schematics/angular:pipe": {
-    "standalone": false,
-    "module": "app"
   }
-}
-
 }
