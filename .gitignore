@@ -79,15 +79,3 @@ ehthumbs.db
 .netlify/
 .firebase/
 *.tgz
-target/
-bin/
-.classpath
-.project
-.settings/
-*.class
-*.jar
-*.war
-.metadata/
-.recommenders/
-application-local.properties
-application-secret.properties
