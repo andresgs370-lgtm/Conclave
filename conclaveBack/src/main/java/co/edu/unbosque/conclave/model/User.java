@@ -1,13 +1,20 @@
 package co.edu.unbosque.conclave.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
-
-import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Entidad que representa un usuario del sistema.
@@ -17,8 +24,8 @@ import java.util.*;
  */
 @Entity
 @Table(name = "useraccount")
-public class User implements UserDetails, Serializable {
-
+public class User implements UserDetails  {
+	
 	/** Número de versión para la serialización. */
 	private static final long serialVersionUID = 1L;
 
@@ -61,27 +68,16 @@ public class User implements UserDetails, Serializable {
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
-	/**
-	 * Historial de prompts enviados por este usuario.
-	 * Relación lazy — no se incluye en {@code toString} para evitar
-	 * {@code LazyInitializationException}.
-	 
-	@OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true,
-			fetch = FetchType.LAZY)
-	private List<PromptHistory> history = new ArrayList<>();
-*/
-	// ── Lifecycle ─────────────────────────────────────────────────────────────
+	//Ciclo de vida 
 
-	/**
-	 * Asigna la fecha de creación antes de persistir la entidad.
-	 */
-	@PrePersist
-	protected void onCreate() {
-		this.createdAt = LocalDateTime.now();
+	/** Asigna la fecha de creación antes de persistir la entidad. No requiere anotación JPA adicional; se llama manualmente desde el servicio o se puede omitir si la BD gestiona el default. */
+	public void initCreatedAt() {
+		if (this.createdAt == null) {
+			this.createdAt = LocalDateTime.now();
+		}
 	}
 
-	// ── Enumeración de roles ──────────────────────────────────────────────────
-
+	// Enumeración de los roles 
 	/**
 	 * Define los roles disponibles en el sistema.
 	 *
@@ -97,8 +93,7 @@ public class User implements UserDetails, Serializable {
 		ADMIN
 	}
 
-	// ── Constructores ─────────────────────────────────────────────────────────
-
+	// Constructores
 	/**
 	 * Constructor por defecto.
 	 * Inicializa todos los flags de cuenta en {@code true} y el rol en {@link Role#USER}.
@@ -155,7 +150,7 @@ public class User implements UserDetails, Serializable {
 		this.role = role;
 	}
 
-	// ── UserDetails ───────────────────────────────────────────────────────────
+	//UserDetails
 
 	/**
 	 * {@inheritDoc}
@@ -163,7 +158,8 @@ public class User implements UserDetails, Serializable {
 	 */
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
+		return java.util.Collections.singletonList(
+				new SimpleGrantedAuthority("ROLE_" + role.name()));
 	}
 
 	/** {@inheritDoc} */
@@ -182,7 +178,7 @@ public class User implements UserDetails, Serializable {
 	@Override
 	public boolean isEnabled() { return enabled; }
 
-	// ── Getters y Setters ─────────────────────────────────────────────────────
+	// Getters y Setters 
 
 	/** @return identificador único del usuario */
 	public Long getId() { return id; }
@@ -243,15 +239,7 @@ public class User implements UserDetails, Serializable {
 	/** @return fecha y hora de creación del usuario */
 	public LocalDateTime getCreatedAt() { return createdAt; }
 
-	/** @return historial de prompts del usuario 
-	public List<PromptHistory> getHistory() { return history; }
-
-	/** @param history historial de prompts a establecer 
-	public void setHistory(List<PromptHistory> history) { this.history = history; }
-
-*/
-	// ── hashCode, equals, toString ────────────────────────────────────────────
-
+	// hashCode, equals y el toString 
 	/**
 	 * Calcula el código hash basado en {@code id}, {@code password} y {@code username}.
 	 *
