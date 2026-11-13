@@ -90,6 +90,8 @@ bin/
 *.war
 .metadata/
 .recommenders/
+# Spring Boot
+src/main/resources/application.properties
 application-local.properties
 application-secret.properties
 
