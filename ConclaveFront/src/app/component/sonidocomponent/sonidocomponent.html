@@ -1,0 +1,231 @@
+<section class="sound-page">
+  <div class="container">
+
+    <div class="page-head text-center animate__animated animate__fadeInDown">
+      <span class="eyebrow">Creación</span>
+      <h1 class="page-title">Crear sonido</h1>
+      <p class="page-sub">Describe lo que quieres escuchar y genera música, voces o efectos.</p>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-lg-5">
+        <div class="panel animate__animated animate__fadeInLeft">
+
+          <div class="mb-4">
+            <span class="form-label d-block">Tipo de sonido</span>
+            <div class="row g-2">
+              <div class="col-4">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-musica" checked>
+                <label class="type-option" for="tipo-musica">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                  </svg>
+                  <strong>Música</strong>
+                </label>
+              </div>
+              <div class="col-4">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-voz">
+                <label class="type-option" for="tipo-voz">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>
+                  </svg>
+                  <strong>Voz</strong>
+                </label>
+              </div>
+              <div class="col-4">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-efectos">
+                <label class="type-option" for="tipo-efectos">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 11v2"/>
+                  </svg>
+                  <strong>Efectos</strong>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="prompt" class="form-label">Tu prompt</label>
+            <textarea
+              id="prompt"
+              class="form-control"
+              rows="4"
+              placeholder="Una canción suave de piano con lluvia de fondo, ideal para estudiar..."></textarea>
+            <div class="hint">Menciona el ánimo, los instrumentos y el ritmo.</div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Modelo</span>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-suno" checked>
+                <label class="model-option" for="model-suno">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/suno.png" alt="Suno">
+                  <strong>Suno</strong>
+                  <small>Canciones con letra y voz</small>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-eleven">
+                <label class="model-option" for="model-eleven">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/elevenlabs.png" alt="ElevenLabs">
+                  <strong>ElevenLabs</strong>
+                  <small>Voces realistas</small>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Duración</span>
+            <div class="chips">
+              <input type="radio" class="btn-check" name="duracion" id="dur-15" checked>
+              <label class="chip" for="dur-15">15 s</label>
+              <input type="radio" class="btn-check" name="duracion" id="dur-30">
+              <label class="chip" for="dur-30">30 s</label>
+              <input type="radio" class="btn-check" name="duracion" id="dur-60">
+              <label class="chip" for="dur-60">1 min</label>
+              <input type="radio" class="btn-check" name="duracion" id="dur-120">
+              <label class="chip" for="dur-120">2 min</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="genero" class="form-label">Género o estilo</label>
+            <select id="genero" class="form-select">
+              <option>Lo-fi</option>
+              <option>Pop</option>
+              <option>Electrónica</option>
+              <option>Acústico</option>
+              <option>Cinematográfico</option>
+            </select>
+          </div>
+
+          <div class="note">
+            <span class="ai-no">✖ Estos modelos no generan imágenes ni video.</span>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-lg w-100">🎵 Generar sonido</button>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="panel animate__animated animate__fadeInRight">
+
+          <div class="panel-top">
+            <div class="panel-title-wrap">
+              <div class="eq" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <h5 class="panel-title">Estudio</h5>
+            </div>
+            <span class="status">Vista de ejemplo</span>
+          </div>
+
+          <div class="stage">
+            <div class="stage-info">
+              <strong>Piano bajo la lluvia</strong>
+              <small>Suno · Lo-fi · 30 s</small>
+            </div>
+
+            <svg class="wave" viewBox="0 0 720 120" preserveAspectRatio="none" role="img" aria-label="Forma de onda del sonido generado">
+              <defs>
+                <linearGradient id="waveGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="720" y2="0">
+                  <stop offset="0" stop-color="#3b82f6"/>
+                  <stop offset="1" stop-color="#8b5cf6"/>
+                </linearGradient>
+                <clipPath id="waveClip"><rect x="0" y="0" width="270" height="120"/></clipPath>
+              </defs>
+              <path d="M5 51.6V68.4M15 46.7V73.3M25 42.0V78.0M35 38.5V81.5M45 39.9V80.1M55 46.3V73.7M65 49.1V70.9M75 44.6V75.4M85 45.6V74.4M95 41.7V78.3M105 34.6V85.4M115 40.1V79.9M125 39.5V80.5M135 31.5V88.5M145 22.3V97.7M155 25.9V94.1M165 26.3V93.7M175 35.1V84.9M185 35.3V84.7M195 27.1V92.9M205 27.7V92.3M215 37.1V82.9M225 37.2V82.8M235 39.1V80.9M245 37.1V82.9M255 32.3V87.7M265 17.6V102.4M275 21.3V98.7M285 26.2V93.8M295 33.3V86.7M305 20.0V100.0M315 8.5V111.5M325 15.7V104.3M335 18.8V101.2M345 33.4V86.6M355 31.5V88.5M365 29.3V90.7M375 38.5V81.5M385 37.4V82.6M395 34.7V85.3M405 33.1V86.9M415 31.4V88.6M425 19.0V101.0M435 16.8V103.2M445 16.0V104.0M455 27.0V93.0M465 39.3V80.7M475 26.0V94.0M485 20.7V99.3M495 19.7V100.3M505 29.4V90.6M515 35.3V84.7M525 38.4V81.6M535 36.0V84.0M545 32.8V87.2M555 33.3V86.7M565 29.0V91.0M575 36.2V83.8M585 34.0V86.0M595 27.5V92.5M605 22.6V97.4M615 30.5V89.5M625 33.6V86.4M635 44.6V75.4M645 42.2V77.8M655 42.7V77.3M665 41.5V78.5M675 45.5V74.5M685 49.3V70.7M695 48.0V72.0M705 46.7V73.3M715 45.6V74.4"
+                    stroke="#ffffff" stroke-opacity="0.16" stroke-width="5" stroke-linecap="round" fill="none"/>
+              <path clip-path="url(#waveClip)"
+                    d="M5 51.6V68.4M15 46.7V73.3M25 42.0V78.0M35 38.5V81.5M45 39.9V80.1M55 46.3V73.7M65 49.1V70.9M75 44.6V75.4M85 45.6V74.4M95 41.7V78.3M105 34.6V85.4M115 40.1V79.9M125 39.5V80.5M135 31.5V88.5M145 22.3V97.7M155 25.9V94.1M165 26.3V93.7M175 35.1V84.9M185 35.3V84.7M195 27.1V92.9M205 27.7V92.3M215 37.1V82.9M225 37.2V82.8M235 39.1V80.9M245 37.1V82.9M255 32.3V87.7M265 17.6V102.4M275 21.3V98.7M285 26.2V93.8M295 33.3V86.7M305 20.0V100.0M315 8.5V111.5M325 15.7V104.3M335 18.8V101.2M345 33.4V86.6M355 31.5V88.5M365 29.3V90.7M375 38.5V81.5M385 37.4V82.6M395 34.7V85.3M405 33.1V86.9M415 31.4V88.6M425 19.0V101.0M435 16.8V103.2M445 16.0V104.0M455 27.0V93.0M465 39.3V80.7M475 26.0V94.0M485 20.7V99.3M495 19.7V100.3M505 29.4V90.6M515 35.3V84.7M525 38.4V81.6M535 36.0V84.0M545 32.8V87.2M555 33.3V86.7M565 29.0V91.0M575 36.2V83.8M585 34.0V86.0M595 27.5V92.5M605 22.6V97.4M615 30.5V89.5M625 33.6V86.4M635 44.6V75.4M645 42.2V77.8M655 42.7V77.3M665 41.5V78.5M675 45.5V74.5M685 49.3V70.7M695 48.0V72.0M705 46.7V73.3M715 45.6V74.4"
+                    stroke="url(#waveGrad)" stroke-width="5" stroke-linecap="round" fill="none"/>
+              <line x1="270" y1="0" x2="270" y2="120" stroke="#ffffff" stroke-width="2" stroke-opacity="0.9"/>
+              <circle cx="270" cy="6" r="6" fill="#ffffff"/>
+            </svg>
+
+            <div class="stage-time">
+              <span>00:11</span>
+              <span>00:30</span>
+            </div>
+          </div>
+
+          <div class="transport">
+            <button type="button" class="t-btn" aria-label="Anterior">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg>
+            </button>
+            <button type="button" class="t-play" aria-label="Reproducir">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button type="button" class="t-btn" aria-label="Siguiente">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5l11 7-11 7z"/></svg>
+            </button>
+            <div class="volume">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 5L6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>
+              </svg>
+              <input type="range" class="form-range" min="0" max="100" value="70" aria-label="Volumen">
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-outline-light" disabled>Descargar</button>
+            <button type="button" class="btn btn-outline-light" disabled>Compartir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recent">
+      <h4 class="recent-title">Tus sonidos recientes</h4>
+
+      <div class="track">
+        <button type="button" class="track-play" aria-label="Reproducir">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="track-info">
+          <strong>Piano bajo la lluvia</strong>
+          <small>Suno · Lo-fi · Música</small>
+        </div>
+        <svg class="track-wave" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2.5 14.7V25.3M7.5 14.5V25.5M12.5 15.8V24.2M17.5 14.6V25.4M22.5 13.3V26.7M27.5 12.6V27.4M32.5 15.0V25.0M37.5 15.1V24.9M42.5 14.5V25.5M47.5 13.7V26.3M52.5 10.9V29.1M57.5 11.1V28.9M62.5 9.8V30.2M67.5 12.2V27.8M72.5 13.0V27.0M77.5 9.0V31.0M82.5 8.6V31.4M87.5 7.9V32.1M92.5 9.7V30.3M97.5 11.2V28.8M102.5 11.7V28.3M107.5 12.4V27.6M112.5 12.0V28.0M117.5 13.2V26.8M122.5 11.4V28.6M127.5 13.7V26.3M132.5 12.2V27.8M137.5 6.5V33.5M142.5 7.2V32.8M147.5 7.8V32.2M152.5 8.5V31.5M157.5 12.5V27.5M162.5 10.5V29.5M167.5 6.9V33.1M172.5 9.2V30.8M177.5 11.1V28.9M182.5 14.2V25.8M187.5 13.7V26.3M192.5 13.9V26.1M197.5 12.0V28.0M202.5 11.3V28.7M207.5 13.2V26.8M212.5 15.1V24.9M217.5 14.8V25.2M222.5 13.3V26.7M227.5 13.2V26.8M232.5 13.8V26.2M237.5 15.4V24.6"
+                stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="track-time">0:30</span>
+      </div>
+
+      <div class="track">
+        <button type="button" class="track-play" aria-label="Reproducir">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="track-info">
+          <strong>Narración de bienvenida</strong>
+          <small>ElevenLabs · Voz femenina · Voz</small>
+        </div>
+        <svg class="track-wave" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2.5 14.9V25.1M7.5 14.2V25.8M12.5 14.6V25.4M17.5 16.2V23.8M22.5 14.3V25.7M27.5 13.4V26.6M32.5 14.6V25.4M37.5 14.9V25.1M42.5 14.8V25.2M47.5 14.0V26.0M52.5 13.3V26.7M57.5 10.7V29.3M62.5 10.3V29.7M67.5 9.1V30.9M72.5 12.6V27.4M77.5 12.2V27.8M82.5 6.1V33.9M87.5 4.9V35.1M92.5 7.4V32.6M97.5 10.5V29.5M102.5 14.0V26.0M107.5 13.2V26.8M112.5 12.6V27.4M117.5 13.3V26.7M122.5 12.0V28.0M127.5 12.4V27.6M132.5 13.4V26.6M137.5 9.1V30.9M142.5 6.6V33.4M147.5 4.5V35.5M152.5 8.0V32.0M157.5 11.7V28.3M162.5 11.6V28.4M167.5 8.8V31.2M172.5 9.5V30.5M177.5 11.6V28.4M182.5 12.2V27.8M187.5 13.7V26.3M192.5 13.8V26.2M197.5 12.8V27.2M202.5 12.5V27.5M207.5 12.7V27.3M212.5 14.1V25.9M217.5 16.0V24.0M222.5 12.9V27.1M227.5 12.7V27.3M232.5 12.4V27.6M237.5 15.0V25.0"
+                stroke="#8b5cf6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="track-time">0:15</span>
+      </div>
+
+      <div class="track">
+        <button type="button" class="track-play" aria-label="Reproducir">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <div class="track-info">
+          <strong>Ritmo electrónico nocturno</strong>
+          <small>Suno · Electrónica · Música</small>
+        </div>
+        <svg class="track-wave" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M2.5 17.1V22.9M7.5 14.6V25.4M12.5 13.4V26.6M17.5 13.1V26.9M22.5 14.1V25.9M27.5 14.6V25.4M32.5 15.4V24.6M37.5 15.5V24.5M42.5 14.9V25.1M47.5 13.6V26.4M52.5 13.2V26.8M57.5 14.6V25.4M62.5 12.8V27.2M67.5 9.2V30.8M72.5 7.6V32.4M77.5 7.3V32.7M82.5 11.2V28.8M87.5 14.0V26.0M92.5 10.7V29.3M97.5 8.5V31.5M102.5 9.9V30.1M107.5 11.0V29.0M112.5 12.5V27.5M117.5 13.3V26.7M122.5 12.4V27.6M127.5 8.5V31.5M132.5 7.2V32.8M137.5 9.4V30.6M142.5 11.9V28.1M147.5 11.1V28.9M152.5 5.7V34.3M157.5 4.8V35.2M162.5 6.6V33.4M167.5 9.6V30.4M172.5 14.5V25.5M177.5 12.3V27.7M182.5 12.1V27.9M187.5 13.5V26.5M192.5 14.3V25.7M197.5 14.8V25.2M202.5 14.5V25.5M207.5 13.7V26.3M212.5 11.0V29.0M217.5 12.6V27.4M222.5 13.0V27.0M227.5 15.5V24.5M232.5 16.1V23.9M237.5 14.8V25.2"
+                stroke="#2dd4bf" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span class="track-time">1:00</span>
+      </div>
+    </div>
+
+  </div>
+</section>

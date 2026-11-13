@@ -8,12 +8,28 @@ import { Paginaprincipalcomponent } from './component/paginaprincipalcomponent/p
 import { Footercomponent } from './component/footercomponent/footercomponent';
 import { routes } from './app.routes';
 import { Modeloscomponent } from './component/modeloscomponent/modeloscomponent';
+import { Logincomponent } from './component/logincomponent/logincomponent';
+import { Registrocomponent } from './component/registrocomponent/registrocomponent';
+import { Videocomponent } from './component/videocomponent/videocomponent';
+import { Imagencomponent } from './component/imagencomponent/imagencomponent';
+import { Sonidocomponent } from './component/sonidocomponent/sonidocomponent';
 /**
  * Módulo raíz de la aplicación Conclave.
  */
 @NgModule({
-  declarations: [App, Navbarcomponent, Paginaprincipalcomponent, Footercomponent, Modeloscomponent],
+  declarations: [
+    App,
+    Navbarcomponent,
+    Paginaprincipalcomponent,
+    Footercomponent,
+    Modeloscomponent,
+    Logincomponent,
+    Registrocomponent,
+    Videocomponent,
+    Imagencomponent,
+    Sonidocomponent,
+  ],
   imports: [BrowserModule, RouterModule.forRoot(routes)],
   bootstrap: [App],
 })
-export class AppModule {}// skipcq: JS-0327
+export class AppModule {} // skipcq: JS-0327
