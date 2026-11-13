@@ -1,0 +1,150 @@
+<section class="image-page">
+  <div class="container">
+
+    <div class="page-head text-center animate__animated animate__fadeInDown">
+      <span class="eyebrow">Creación</span>
+      <h1 class="page-title">Crear imagen</h1>
+      <p class="page-sub">Describe tu idea, elige un modelo y genera tu imagen.</p>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-lg-5">
+        <div class="panel animate__animated animate__fadeInLeft">
+
+          <div class="mb-4">
+            <label for="prompt" class="form-label">Tu prompt</label>
+            <textarea
+              id="prompt"
+              class="form-control"
+              rows="5"
+              placeholder="Un gato astronauta flotando en una galaxia de colores, estilo ilustración digital..."></textarea>
+            <div class="hint">Mientras más detalles des, mejor será el resultado.</div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Modelo</span>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-midjourney" checked>
+                <label class="model-option" for="model-midjourney">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/midjourney.png" alt="Midjourney">
+                  <strong>Midjourney</strong>
+                  <small>Arte de alta calidad</small>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-dalle">
+                <label class="model-option" for="model-dalle">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/dalle-color.png" alt="DALL·E">
+                  <strong>DALL·E</strong>
+                  <small>Imágenes desde texto</small>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Cantidad</span>
+            <div class="chips">
+              <input type="radio" class="btn-check" name="cantidad" id="cant-1" checked>
+              <label class="chip" for="cant-1">1 imagen</label>
+              <input type="radio" class="btn-check" name="cantidad" id="cant-2">
+              <label class="chip" for="cant-2">2 imágenes</label>
+              <input type="radio" class="btn-check" name="cantidad" id="cant-4">
+              <label class="chip" for="cant-4">4 imágenes</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Formato</span>
+            <div class="chips">
+              <input type="radio" class="btn-check" name="formato" id="fmt-11" checked>
+              <label class="chip" for="fmt-11">1:1 Cuadrado</label>
+              <input type="radio" class="btn-check" name="formato" id="fmt-169">
+              <label class="chip" for="fmt-169">16:9 Horizontal</label>
+              <input type="radio" class="btn-check" name="formato" id="fmt-916">
+              <label class="chip" for="fmt-916">9:16 Vertical</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="estilo" class="form-label">Estilo</label>
+            <select id="estilo" class="form-select">
+              <option>Realista</option>
+              <option>Ilustración digital</option>
+              <option>Óleo</option>
+              <option>Minimalista</option>
+            </select>
+          </div>
+
+          <div class="note">
+            <span class="ai-no">✖ Estos modelos no generan audio ni video.</span>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-lg w-100">🖼️ Generar imagen</button>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="panel animate__animated animate__fadeInRight">
+          <div class="panel-top">
+            <h5 class="panel-title">Vista previa</h5>
+            <span class="status">Sin generar</span>
+          </div>
+
+          <div class="player">
+            <div class="play-btn">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                <circle cx="8.5" cy="8.5" r="1.6"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            </div>
+            <p class="player-text">Tu imagen aparecerá aquí</p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-outline-light" disabled>Ampliar</button>
+            <button type="button" class="btn btn-outline-light" disabled>Descargar</button>
+            <button type="button" class="btn btn-outline-light" disabled>Compartir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recent">
+      <h4 class="recent-title">Tus imágenes recientes</h4>
+      <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-1"></div>
+            <div class="recent-info">
+              <strong>Atardecer en el mar</strong>
+              <small>Midjourney · 1:1 · Realista</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-2"></div>
+            <div class="recent-info">
+              <strong>Ciudad futurista</strong>
+              <small>DALL·E · 16:9 · Ilustración digital</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-3"></div>
+            <div class="recent-info">
+              <strong>Bosque con niebla</strong>
+              <small>Midjourney · 9:16 · Óleo</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
