@@ -90,10 +90,11 @@ bin/
 *.war
 .metadata/
 .recommenders/
-# Spring Boot
-src/main/resources/application.properties
 application-local.properties
 application-secret.properties
 
 .angular/
 !.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+src/main/resources/application.properties
