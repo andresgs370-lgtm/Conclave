@@ -1,0 +1,155 @@
+<section class="video-page">
+  <div class="container">
+
+    <div class="page-head text-center animate__animated animate__fadeInDown">
+      <span class="eyebrow">Creación</span>
+      <h1 class="page-title">Crear video</h1>
+      <p class="page-sub">Describe tu idea, elige un modelo y genera tu clip.</p>
+    </div>
+
+    <div class="row g-4">
+
+      <div class="col-lg-5">
+        <div class="panel animate__animated animate__fadeInLeft">
+
+          <div class="mb-4">
+            <label for="prompt" class="form-label">Tu prompt</label>
+            <textarea
+              id="prompt"
+              class="form-control"
+              rows="5"
+              placeholder="Un atardecer sobre el mar, con olas suaves y gaviotas volando..."></textarea>
+            <div class="hint">Mientras más detalles des, mejor será el resultado.</div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Modelo</span>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-sora" checked>
+                <label class="model-option" for="model-sora">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/sora-color.png" alt="Sora">
+                  <strong>Sora</strong>
+                  <small>Texto a video</small>
+                </label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="modelo" id="model-runway">
+                <label class="model-option" for="model-runway">
+                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/runway.png" alt="Runway">
+                  <strong>Runway</strong>
+                  <small>Crea y edita clips</small>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Duración</span>
+            <div class="chips">
+              <input type="radio" class="btn-check" name="duracion" id="dur-5" checked>
+              <label class="chip" for="dur-5">5 s</label>
+              <input type="radio" class="btn-check" name="duracion" id="dur-10">
+              <label class="chip" for="dur-10">10 s</label>
+              <input type="radio" class="btn-check" name="duracion" id="dur-15">
+              <label class="chip" for="dur-15">15 s</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <span class="form-label d-block">Formato</span>
+            <div class="chips">
+              <input type="radio" class="btn-check" name="formato" id="fmt-169" checked>
+              <label class="chip" for="fmt-169">16:9 Horizontal</label>
+              <input type="radio" class="btn-check" name="formato" id="fmt-916">
+              <label class="chip" for="fmt-916">9:16 Vertical</label>
+              <input type="radio" class="btn-check" name="formato" id="fmt-11">
+              <label class="chip" for="fmt-11">1:1 Cuadrado</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="estilo" class="form-label">Estilo</label>
+            <select id="estilo" class="form-select">
+              <option>Realista</option>
+              <option>Cinematográfico</option>
+              <option>Animación</option>
+              <option>Minimalista</option>
+            </select>
+          </div>
+
+          <div class="note">
+            <span class="ai-no">✖ Estos modelos no generan audio ni música.</span>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-lg w-100">🎬 Generar video</button>
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="panel animate__animated animate__fadeInRight">
+          <div class="panel-top">
+            <h5 class="panel-title">Vista previa</h5>
+            <span class="status">Sin generar</span>
+          </div>
+
+          <div class="player">
+            <div class="play-btn">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
+            <p class="player-text">Tu video aparecerá aquí</p>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline-bar"><div class="timeline-fill"></div></div>
+            <div class="timeline-time">
+              <span>00:00</span>
+              <span>00:05</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="btn btn-outline-light" disabled>Descargar</button>
+            <button type="button" class="btn btn-outline-light" disabled>Compartir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recent">
+      <h4 class="recent-title">Tus videos recientes</h4>
+      <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-1"><span class="thumb-play">▶</span></div>
+            <div class="recent-info">
+              <strong>Atardecer en el mar</strong>
+              <small>Sora · 10 s · 16:9</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-2"><span class="thumb-play">▶</span></div>
+            <div class="recent-info">
+              <strong>Ciudad futurista</strong>
+              <small>Runway · 5 s · 9:16</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+          <div class="recent-card">
+            <div class="thumb thumb-3"><span class="thumb-play">▶</span></div>
+            <div class="recent-info">
+              <strong>Bosque con niebla</strong>
+              <small>Sora · 15 s · 1:1</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

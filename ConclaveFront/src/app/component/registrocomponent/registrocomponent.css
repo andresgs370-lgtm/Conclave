@@ -1,0 +1,94 @@
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(180deg, #141a3a 0%, #0e1225 100%);
+}
+
+.register-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  background: #151b35;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  color: #f4f9f9;
+}
+
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.8rem;
+}
+
+.register-title {
+  font-weight: 800;
+  font-size: 2rem;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.register-sub {
+  margin-bottom: 1.5rem;
+  color: #a9b1c9;
+}
+
+.form-label {
+  color: #d5dbee;
+  font-weight: 500;
+}
+
+.form-control {
+  background: #0e1225;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f4f9f9;
+}
+
+.form-control::placeholder {
+  color: #6f7894;
+}
+
+.form-control:focus {
+  background: #0e1225;
+  color: #f4f9f9;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+}
+
+.form-check-input {
+  background-color: #0e1225;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.form-check-input:checked {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.form-check-label {
+  color: #a9b1c9;
+}
+
+.register-footer {
+  margin: 1.5rem 0 0;
+  text-align: center;
+  color: #a9b1c9;
+}
+
+.register-footer a {
+  color: #6ea8fe;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.register-footer a:hover {
+  text-decoration: underline;
+}

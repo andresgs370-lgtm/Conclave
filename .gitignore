@@ -95,3 +95,6 @@ application-secret.properties
 
 .angular/
 !.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+src/main/resources/application.properties

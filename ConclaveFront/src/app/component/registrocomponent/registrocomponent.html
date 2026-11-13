@@ -1,0 +1,63 @@
+<section class="register-page">
+  <div class="register-card animate__animated animate__fadeInUp">
+    <span class="eyebrow">Únete</span>
+    <h2 class="register-title">Crea tu cuenta</h2>
+    <p class="register-sub">Regístrate y empieza a comparar modelos de IA.</p>
+
+    <form>
+      <div class="mb-3">
+        <label for="name" class="form-label">Nombre completo</label>
+        <input
+          id="name"
+          type="text"
+          class="form-control form-control-lg"
+          placeholder="Tu nombre"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label for="email" class="form-label">Correo electrónico</label>
+        <input
+          id="email"
+          type="email"
+          class="form-control form-control-lg"
+          placeholder="tucorreo@ejemplo.com"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input
+          id="password"
+          type="password"
+          class="form-control form-control-lg"
+          placeholder="Mínimo 6 caracteres"
+        />
+      </div>
+
+      <div class="mb-3">
+        <label for="confirm" class="form-label">Confirmar contraseña</label>
+        <input
+          id="confirm"
+          type="password"
+          class="form-control form-control-lg"
+          placeholder="Repite tu contraseña"
+        />
+      </div>
+
+      <div class="form-check mb-4">
+        <input class="form-check-input" type="checkbox" id="terms" />
+        <label class="form-check-label" for="terms">
+          Acepto los términos y condiciones
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg w-100">Crear cuenta</button>
+    </form>
+
+    <p class="register-footer">
+      ¿Ya tienes cuenta?
+      <a routerLink="/login">Inicia sesión</a>
+    </p>
+  </div>
+</section>
