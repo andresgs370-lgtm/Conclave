@@ -237,8 +237,8 @@ public class UserDTO {
 	@Override
 	public String toString() {
 		return "UserDTO [id=" + id + ", username=" + username + ", email=" + email + ", fullName=" + fullName
-				+ ", password=" + password + ", role=" + role + ", enabled=" + enabled + ", createdAt=" + createdAt
-				+ ", getId()=" + getId() + ", getUsername()=" + getUsername() + ", getPassword()=" + getPassword()
+				+ ", password=[PROTECTED], role=" + role + ", enabled=" + enabled + ", createdAt=" + createdAt
+				+ ", getId()=" + getId() + ", getUsername()=" + getUsername() + ", getPassword()=[PROTECTED]"
 				+ ", getRole()=" + getRole() + ", hashCode()=" + hashCode() + ", getClass()=" + getClass()
 				+ ", toString()=" + super.toString() + "]";
 	}
