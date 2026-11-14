@@ -69,7 +69,7 @@ public class ApiKeyUpdateDTO {
 
 	@Override
 	public String toString() {
-		return "ApiKeyUpdateDTO [newKey=" + newKey + ", active=" + active + "]";
+		return "ApiKeyUpdateDTO [newKey=<redacted>, active=" + active + "]";
 	}
 	
 	
