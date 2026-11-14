@@ -6,4 +6,5 @@ import { Component } from '@angular/core';
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
+// skipcq: JS-0327
 export class App {}

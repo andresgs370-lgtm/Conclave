@@ -219,13 +219,12 @@ public class UserService implements CRUDOperation<UserDTO> {
 
 		// Cambio de enabled: solo si el DTO lo envía explícitamente
 		if (newData.getEnabled() != null) {
-			temp.setEnabled(newData.getEnabled().booleanValue());
+			temp.setEnabled(newData.getEnabled());
 		}
 
 		userRepo.save(temp);
 		return 0;
 	}
-
 
 	/**
 	 * Obtiene un usuario por su ID.
