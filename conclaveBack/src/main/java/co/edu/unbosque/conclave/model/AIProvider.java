@@ -12,6 +12,11 @@ public enum AIProvider {
 
 	private final String displayName;
 
+	/**
+	 * Constructor del enum.
+	 *
+	 * @param displayName nombre legible del proveedor
+	 */
 	AIProvider(String displayName) {
 		this.displayName = displayName;
 	}

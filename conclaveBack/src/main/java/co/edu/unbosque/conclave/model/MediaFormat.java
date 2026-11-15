@@ -28,6 +28,13 @@ public enum MediaFormat {
     private final String mimeType;
     private final String extension;
 
+    /**
+	 * Constructor del enum.
+	 *
+	 * @param outputType tipo de salida al que pertenece
+	 * @param mimeType   MIME type del formato
+	 * @param extension  extensión de archivo
+	 */
     MediaFormat(OutputType outputType, String mimeType, String extension) {
         this.outputType = outputType;
         this.mimeType = mimeType;

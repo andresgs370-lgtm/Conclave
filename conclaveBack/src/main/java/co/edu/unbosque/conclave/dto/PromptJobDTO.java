@@ -43,19 +43,6 @@ public class PromptJobDTO {
 	public PromptJobDTO() {
 	}
 
-	public PromptJobDTO(String jobId, JobStatus status, OutputType outputType, String promptText, String model,
-			LocalDateTime createdAt, LocalDateTime expiresAt, AIResponseDTO result) {
-		super();
-		this.jobId = jobId;
-		this.status = status;
-		this.outputType = outputType;
-		this.promptText = promptText;
-		this.model = model;
-		this.createdAt = createdAt;
-		this.expiresAt = expiresAt;
-		this.result = result;
-	}
-
 	public String getJobId() {
 		return jobId;
 	}

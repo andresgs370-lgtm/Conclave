@@ -81,6 +81,9 @@ public class PromptHistory implements Serializable {
 			fetch = FetchType.LAZY)
 	private ProviderResponseLog responseLog;
 	
+	/**
+	 * Asigna la fecha de creación y el estado inicial antes de persistir la entidad.
+	 */
 	@PrePersist
 	protected void onCreate() {
 		this.createdAt = LocalDateTime.now();

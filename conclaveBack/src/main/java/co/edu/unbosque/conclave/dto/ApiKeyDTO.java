@@ -62,7 +62,12 @@ public class ApiKeyDTO {
 	public void setMaskedKey(String maskedKey) {
 		this.maskedKey = maskedKey;
 	}
-
+	
+	/**
+	 * Indica si la clave de API se encuentra activa.
+	 *
+	 * @return {@code true} si la clave está activa; {@code false} en caso contrario.
+	 */
 	public boolean isActive() {
 		return active;
 	}

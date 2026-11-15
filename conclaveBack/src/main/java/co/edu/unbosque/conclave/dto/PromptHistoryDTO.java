@@ -45,20 +45,6 @@ public class PromptHistoryDTO {
 	public PromptHistoryDTO() {
 	}
 
-	public PromptHistoryDTO(Long id, String username, String promptText, OutputType outputType, MediaFormat format,
-			String model, JobStatus status, LocalDateTime createdAt, AIResponseDTO response) {
-		super();
-		this.id = id;
-		this.username = username;
-		this.promptText = promptText;
-		this.outputType = outputType;
-		this.format = format;
-		this.model = model;
-		this.status = status;
-		this.createdAt = createdAt;
-		this.response = response;
-	}
-
 	public Long getId() {
 		return id;
 	}

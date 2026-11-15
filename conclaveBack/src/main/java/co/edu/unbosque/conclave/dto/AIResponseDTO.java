@@ -53,35 +53,19 @@ public class AIResponseDTO {
 	public AIResponseDTO() {
 	}
 
-	public AIResponseDTO(AIProvider provider, String model, ResponseStatus status, int httpStatus, String textContent,
-			MediaFormat format, String mimeType, String downloadUrl, long mediaSizeBytes, String errorMessage,
-			long durationMs) {
-		super();
-		this.provider = provider;
-		this.model = model;
-		this.status = status;
-		this.httpStatus = httpStatus;
-		this.textContent = textContent;
-		this.format = format;
-		this.mimeType = mimeType;
-		this.downloadUrl = downloadUrl;
-		this.mediaSizeBytes = mediaSizeBytes;
-		this.errorMessage = errorMessage;
-		this.durationMs = durationMs;
-	}
-
+	/** @return proveedor de IA que generó la respuesta */
 	public AIProvider getProvider() {
 		return provider;
 	}
-
+	/** @param provider proveedor a establecer */
 	public void setProvider(AIProvider provider) {
 		this.provider = provider;
 	}
-
+	/** @return nombre del modelo utilizado */
 	public String getModel() {
 		return model;
 	}
-
+	/** @param model modelo a establecer */
 	public void setModel(String model) {
 		this.model = model;
 	}
