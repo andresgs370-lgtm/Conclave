@@ -276,28 +276,154 @@ public class PromptService {
     }
 
     private AIResponseDTO generateReplicateVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis(); String model = modelOr(request.getVideoModel(), "minimax/video-01"); String apiKey;
-        try { apiKey = key(AIProvider.REPLICATE); } catch (Exception e) { return failed(base(AIProvider.REPLICATE, model, 400, start), "Configura REPLICATE en Swagger (/admin/apikey/update/REPLICATE)."); }
+        long start = System.currentTimeMillis();
+        String model = modelOr(request.getVideoModel(), "minimax/video-01");
+        String apiKey;
+
         try {
-            JsonObject input = new JsonObject(); input.addProperty("prompt", request.getPromptText()); JsonObject body = new JsonObject(); body.add("input", input);
-            HttpResponse<String> created = post("https://api.replicate.com/v1/models/" + model + "/predictions", Map.of("Authorization", "Bearer " + apiKey, "Content-Type", "application/json", "Prefer", "wait"), body.toString());
-            AIResponseDTO dto = base(AIProvider.REPLICATE, model, created.statusCode(), start); if (!ok(created)) return failed(dto, "Replicate: " + error(created));
-            JsonObject prediction = JsonParser.parseString(created.body()).getAsJsonObject(); String id = stringValue(prediction, "id"); String pollUrl = prediction.has("urls") && prediction.get("urls").isJsonObject() ? stringValue(prediction.getAsJsonObject("urls"), "get") : null;
-            String url = outputUrl(prediction); String state = stringValue(prediction, "status"); if (url != null && List.of("succeeded", "success").contains(state)) return successVideo(dto, url, start);
-            if (pollUrl == null && id != null) pollUrl = "https://api.replicate.com/v1/predictions/" + id;
-            if (pollUrl == null) return failed(dto, "Replicate no devolvió URL de consulta: " + created.body()); return pollReplicate(pollUrl, model, apiKey, dto, start, System.currentTimeMillis()+VIDEO_TIMEOUT_MS);
-        } catch (Exception e) { return failed(base(AIProvider.REPLICATE, model, 500, start), "Error Replicate: " + e.getMessage()); }
+            apiKey = key(AIProvider.REPLICATE);
+        } catch (Exception e) {
+            return failed(base(AIProvider.REPLICATE, model, 400, start),
+                    "Configura REPLICATE en Swagger (/admin/apikey/update/REPLICATE).");
+        }
+
+        try {
+            JsonObject input = new JsonObject();
+            input.addProperty("prompt", request.getPromptText());
+
+            JsonObject body = new JsonObject();
+            body.add("input", input);
+
+            HttpResponse<String> created = post(
+                    "https://api.replicate.com/v1/models/" + model + "/predictions",
+                    Map.of(
+                            "Authorization", "Bearer " + apiKey,
+                            "Content-Type", "application/json",
+                            "Prefer", "wait"),
+                    body.toString());
+
+            AIResponseDTO dto = base(AIProvider.REPLICATE, model, created.statusCode(), start);
+            if (!ok(created)) {
+                return failed(dto, "Replicate: " + error(created));
+            }
+
+            JsonObject prediction = JsonParser.parseString(created.body()).getAsJsonObject();
+            String id = stringValue(prediction, "id");
+            String pollUrl = prediction.has("urls") && prediction.get("urls").isJsonObject()
+                    ? stringValue(prediction.getAsJsonObject("urls"), "get")
+                    : null;
+
+            String url = outputUrl(prediction);
+            String state = stringValue(prediction, "status");
+            if (url != null && List.of("succeeded", "success").contains(state)) {
+                return successVideo(dto, url, start);
+            }
+
+            if (pollUrl == null && id != null) {
+                pollUrl = "https://api.replicate.com/v1/predictions/" + id;
+            }
+            if (pollUrl == null) {
+                return failed(dto, "Replicate no devolvió URL de consulta: " + created.body());
+            }
+
+            return pollReplicate(pollUrl, model, apiKey, dto, start,
+                    System.currentTimeMillis() + VIDEO_TIMEOUT_MS);
+        } catch (Exception e) {
+            return failed(base(AIProvider.REPLICATE, model, 500, start),
+                    "Error Replicate: " + e.getMessage());
+        }
     }
 
-    private AIResponseDTO pollReplicate(String url, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) return failed(dto, "Replicate excedió el tiempo máximo de generación."); HttpResponse<String> response = get(url, Map.of("Authorization", "Bearer " + apiKey)); if (!ok(response)) return failed(dto, "Replicate: " + error(response)); JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject(); String status = stringValue(json, "status");
-        if ("succeeded".equalsIgnoreCase(status)) { String video = outputUrl(json); if (video == null) return failed(dto, "Replicate terminó sin URL de video: " + response.body()); return successVideo(dto, video, start); }
-        if (List.of("failed", "canceled").contains(status)) return failed(dto, firstString(json, "error") == null ? "Replicate falló: " + response.body() : firstString(json, "error")); Thread.sleep(POLL_MS); return pollReplicate(url, model, apiKey, dto, start, deadline);
+    /**
+     * Consulta periódicamente el estado de una predicción de Replicate hasta que finaliza
+     * o se alcanza el tiempo máximo de espera.
+     */
+    private AIResponseDTO pollReplicate(String url, String model, String apiKey,
+            AIResponseDTO dto, long start, long deadline) throws Exception {
+        if (System.currentTimeMillis() > deadline) {
+            return failed(dto, "Replicate excedió el tiempo máximo de generación.");
+        }
+
+        HttpResponse<String> response = get(url, Map.of("Authorization", "Bearer " + apiKey));
+        if (!ok(response)) {
+            return failed(dto, "Replicate: " + error(response));
+        }
+
+        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+        String status = stringValue(json, "status");
+
+        if ("succeeded".equalsIgnoreCase(status)) {
+            String video = outputUrl(json);
+            if (video == null) {
+                return failed(dto, "Replicate terminó sin URL de video: " + response.body());
+            }
+            return successVideo(dto, video, start);
+        }
+
+        if (List.of("failed", "canceled").contains(status)) {
+            String error = firstString(json, "error");
+            return failed(dto, error == null
+                    ? "Replicate falló: " + response.body()
+                    : error);
+        }
+
+        Thread.sleep(POLL_MS);
+        return pollReplicate(url, model, apiKey, dto, start, deadline);
     }
 
-    private String modelOr(String value, String fallback) { return value == null || value.isBlank() ? fallback : value.trim(); }
-    private String outputUrl(JsonObject json) { String direct = firstString(json, "video_url", "url", "download_url"); if (direct != null) return direct; if (json.has("video") && json.get("video").isJsonObject()) return firstString(json.getAsJsonObject("video"), "url"); if (json.has("output") && json.get("output").isJsonArray() && json.getAsJsonArray("output").size()>0) { var item=json.getAsJsonArray("output").get(0); if(item.isJsonPrimitive()) return item.getAsString(); if(item.isJsonObject()) return firstString(item.getAsJsonObject(), "url"); } if (json.has("output") && json.get("output").isJsonPrimitive()) return json.get("output").getAsString(); if (json.has("data") && json.get("data").isJsonObject()) return outputUrl(json.getAsJsonObject("data")); return null; }
-    private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start) { dto.setStatus(ResponseStatus.SUCCESS); dto.setDownloadUrl(url); dto.setMimeType("video/mp4"); dto.setFormat(MediaFormat.MP4); dto.setDurationMs(System.currentTimeMillis()-start); return dto; }
+    /**
+     * Devuelve el valor recibido o el valor alternativo cuando el primero es nulo o está vacío.
+     */
+    private String modelOr(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    /**
+     * Extrae la URL del video de las estructuras de respuesta admitidas por los proveedores.
+     */
+    private String outputUrl(JsonObject json) {
+        String direct = firstString(json, "video_url", "url", "download_url");
+        if (direct != null) {
+            return direct;
+        }
+
+        if (json.has("video") && json.get("video").isJsonObject()) {
+            return firstString(json.getAsJsonObject("video"), "url");
+        }
+
+        if (json.has("output") && json.get("output").isJsonArray()
+                && json.getAsJsonArray("output").size() > 0) {
+            var item = json.getAsJsonArray("output").get(0);
+            if (item.isJsonPrimitive()) {
+                return item.getAsString();
+            }
+            if (item.isJsonObject()) {
+                return firstString(item.getAsJsonObject(), "url");
+            }
+        }
+
+        if (json.has("output") && json.get("output").isJsonPrimitive()) {
+            return json.get("output").getAsString();
+        }
+
+        if (json.has("data") && json.get("data").isJsonObject()) {
+            return outputUrl(json.getAsJsonObject("data"));
+        }
+
+        return null;
+    }
+
+    /**
+     * Marca la respuesta como exitosa y establece los datos de descarga del video generado.
+     */
+    private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start) {
+        dto.setStatus(ResponseStatus.SUCCESS);
+        dto.setDownloadUrl(url);
+        dto.setMimeType("video/mp4");
+        dto.setFormat(MediaFormat.MP4);
+        dto.setDurationMs(System.currentTimeMillis() - start);
+        return dto;
+    }
 
     /**
      * Consulta el estado de la generación de Agnes AI hasta que finaliza o se agota el plazo.

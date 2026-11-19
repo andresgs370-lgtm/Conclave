@@ -1,11 +1,12 @@
 package co.edu.unbosque.conclave.exception;
 
-import co.edu.unbosque.conclave.dto.ErrorResponseDTO;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;\nimport org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import co.edu.unbosque.conclave.dto.ErrorResponseDTO;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Manejador global de excepciones para todos los controladores REST.
