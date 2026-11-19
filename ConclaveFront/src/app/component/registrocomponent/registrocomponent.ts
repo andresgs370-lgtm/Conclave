@@ -41,7 +41,7 @@ export class Registrocomponent {
           this.cdr.detectChanges();
         },
         error: (err) => {
-          this.error = this.registrationError(err);
+          this.error = Registrocomponent.registrationError(err);
 
           this.loading = false;
           this.cdr.detectChanges();
@@ -51,35 +51,87 @@ export class Registrocomponent {
 
   /** Valida los campos requeridos antes de registrar la cuenta. */
   private validateForm(): string {
-    if (!this.username.trim() || !this.email.trim() || !this.password || !this.confirm) return 'Completa todos los campos.';
-    if (this.password !== this.confirm) return 'Las contraseñas no coinciden.';
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/.test(this.password)) {
-      return 'La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.';
-    }
-    if (!this.terms) return 'Debes aceptar los términos y condiciones.';
-    return '';
+    return this.requiredFieldsError()
+      || this.passwordMatchError()
+      || this.passwordStrengthError()
+      || this.termsError();
+  }
+
+  /** Comprueba que los campos obligatorios estén completos. */
+  private requiredFieldsError(): string {
+    return !this.username.trim() || !this.email.trim() || !this.password || !this.confirm
+      ? 'Completa todos los campos.' : '';
+  }
+
+  /** Comprueba que ambas contraseñas coincidan. */
+  private passwordMatchError(): string {
+    return this.password !== this.confirm ? 'Las contraseñas no coinciden.' : '';
+  }
+
+  /** Comprueba la longitud y composición mínima de la contraseña. */
+  private passwordStrengthError(): string {
+    const valid = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/.test(this.password);
+    return valid ? '' : 'La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un símbolo.';
+  }
+
+  /** Comprueba la aceptación de términos y condiciones. */
+  private termsError(): string {
+    return this.terms ? '' : 'Debes aceptar los términos y condiciones.';
   }
 
   /** Traduce los errores de registro a mensajes comprensibles. */
-  private registrationError(err: unknown): string {
-    const raw = err && typeof err === 'object' && 'error' in err ? (err as {error?: unknown}).error : null;
+  private static registrationError(err: unknown): string {
+    const raw = Registrocomponent.errorPayload(err);
     const message = Registrocomponent.errorText(raw).toLowerCase();
-    if (message.includes('nombre de usuario') || message.includes('username') || message.includes('usuario ya existe')) return 'Este nombre de usuario ya está registrado.';
-    if (message.includes('correo') || message.includes('email') || message.includes('e-mail')) return 'Este correo electrónico ya está registrado.';
-    if (message.includes('contraseña') || message.includes('password')) return 'La contraseña no cumple los requisitos.';
-    if (err && typeof err === 'object' && 'status' in err && (err as {status?: number}).status === 400) {
-      return Registrocomponent.errorText(raw) || 'No se pudo crear la cuenta. Verifica los datos ingresados.';
-    }
-    return 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
+    return Registrocomponent.usernameError(message)
+      || Registrocomponent.emailError(message)
+      || Registrocomponent.passwordError(message)
+      || Registrocomponent.badRequestError(err, raw)
+      || 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
+  }
+
+  /** Extrae el cuerpo de error de una respuesta HTTP. */
+  private static errorPayload(err: unknown): unknown {
+    if (!err || typeof err !== 'object' || !('error' in err)) return null;
+    return (err as { error?: unknown }).error;
+  }
+
+  /** Traduce errores relacionados con el nombre de usuario. */
+  private static usernameError(message: string): string {
+    return ['nombre de usuario', 'username', 'usuario ya existe'].some(term => message.includes(term))
+      ? 'Este nombre de usuario ya está registrado.' : '';
+  }
+
+  /** Traduce errores relacionados con el correo electrónico. */
+  private static emailError(message: string): string {
+    return ['correo', 'email', 'e-mail'].some(term => message.includes(term))
+      ? 'Este correo electrónico ya está registrado.' : '';
+  }
+
+  /** Traduce errores relacionados con la contraseña. */
+  private static passwordError(message: string): string {
+    return message.includes('contraseña') || message.includes('password')
+      ? 'La contraseña no cumple los requisitos.' : '';
+  }
+
+  /** Devuelve el mensaje del servidor para errores HTTP 400. */
+  private static badRequestError(err: unknown, raw: unknown): string {
+    if (!err || typeof err !== 'object' || !('status' in err)) return '';
+    return (err as { status?: number }).status === 400
+      ? Registrocomponent.errorText(raw) || 'No se pudo crear la cuenta. Verifica los datos ingresados.'
+      : '';
   }
 
   /** Convierte el cuerpo de error del backend a texto. */
   private static errorText(raw: unknown): string {
     if (typeof raw === 'string') return raw;
-    if (raw && typeof raw === 'object') {
-      const body = raw as {message?: unknown; error?: unknown};
-      return String(body.message || body.error || '');
-    }
-    return '';
+    return Registrocomponent.errorObjectText(raw);
+  }
+
+  /** Obtiene message o error cuando el cuerpo es un objeto. */
+  private static errorObjectText(raw: unknown): string {
+    if (!raw || typeof raw !== 'object') return '';
+    const body = raw as { message?: unknown; error?: unknown };
+    return String(body.message || body.error || '');
   }
 }

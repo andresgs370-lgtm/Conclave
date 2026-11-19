@@ -70,11 +70,22 @@ export class Videocomponent {
 
   /** Obtiene un mensaje legible de la respuesta del servidor. */
   private static messageFromBody(body: unknown): string | null {
-    if (typeof body === 'string') return body.trim() ? body : null;
-    if (!body || typeof body !== 'object') return null;
-    const record = body as Record<string, unknown>;
+    const directMessage = Videocomponent.bodyText(body);
+    if (directMessage !== null) return directMessage;
+    const record = Videocomponent.bodyRecord(body);
+    if (!record) return null;
     return Videocomponent.firstText(record, ['message', 'detail'])
       ?? Videocomponent.nestedErrorMessage(record['error']);
+  }
+
+  /** Devuelve el cuerpo cuando es texto no vacío. */
+  private static bodyText(body: unknown): string | null {
+    return typeof body === 'string' && body.trim() ? body : null;
+  }
+
+  /** Convierte el cuerpo a un registro cuando es un objeto. */
+  private static bodyRecord(body: unknown): Record<string, unknown> | null {
+    return body && typeof body === 'object' ? body as Record<string, unknown> : null;
   }
 
   /** Busca el primer texto disponible entre las propiedades indicadas. */

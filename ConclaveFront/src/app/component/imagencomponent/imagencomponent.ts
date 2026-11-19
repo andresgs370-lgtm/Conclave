@@ -68,18 +68,18 @@ export class Imagencomponent {
     this.loading = true;
     this.api.generate(this.prompt, 'IMAGE', this.format, this.imageProvider).subscribe({
       next: (response: unknown) => {
-        this.results = this.normalizeResults(response);
+        this.results = Imagencomponent.normalizeResults(response);
         this.loading = false;
       },
       error: (err: unknown) => {
-        this.error = this.getErrorMessage(err);
+        this.error = Imagencomponent.getErrorMessage(err);
         this.loading = false;
       },
     });
   }
 
   /** Normaliza la respuesta del backend para mostrar cada resultado. */
-  private normalizeResults(response: unknown): GenerationResult[] {
+  private static normalizeResults(response: unknown): GenerationResult[] {
     if (!Array.isArray(response)) return [];
     return response.map((item: unknown) => {
       const result = item as Omit<GenerationResult, 'mediaType' | 'statusClass'>;
@@ -101,13 +101,22 @@ export class Imagencomponent {
   }
 
   /** Convierte una respuesta de error en un mensaje para el usuario. */
-  private getErrorMessage(error: unknown): string {
-    if (typeof error === 'string') return error;
-    if (error && typeof error === 'object' && 'error' in error) {
-      return Imagencomponent.messageFromPayload((error as { error?: unknown }).error)
-        || 'No fue posible generar el contenido.';
-    }
-    return 'No fue posible generar el contenido.';
+  private static getErrorMessage(error: unknown): string {
+    const directMessage = Imagencomponent.stringMessage(error);
+    if (directMessage) return directMessage;
+    const payload = Imagencomponent.errorPayload(error);
+    return Imagencomponent.messageFromPayload(payload) || 'No fue posible generar el contenido.';
+  }
+
+  /** Obtiene el mensaje directo cuando el error es texto. */
+  private static stringMessage(error: unknown): string | null {
+    return typeof error === 'string' ? error : null;
+  }
+
+  /** Obtiene el cuerpo de error cuando existe la propiedad correspondiente. */
+  private static errorPayload(error: unknown): unknown {
+    if (!error || typeof error !== 'object' || !('error' in error)) return null;
+    return (error as { error?: unknown }).error;
   }
 
   /** Extrae un mensaje de error de una respuesta del servidor. */
