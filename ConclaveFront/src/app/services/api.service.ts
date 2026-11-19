@@ -21,9 +21,11 @@ export interface GenerationResult {
   format?: string;
 }
 
+/** Servicio para comunicación HTTP con el backend de Conclave. */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly baseUrl = 'http://localhost:8080';
+  private static readonly tokenStorageKey = 'conclave_token';
 
   constructor(private http: HttpClient) {}
 
@@ -39,7 +41,7 @@ export class ApiService {
 
   /** Obtiene el perfil del usuario autenticado. */
   profile(): Observable<unknown> {
-    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: this.authHeaders() });
+    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: ApiService.authHeaders() });
   }
 
   /** Envía un prompt al proveedor de generación seleccionado. */
@@ -60,13 +62,13 @@ export class ApiService {
       videoModel: videoModel ?? null,
     };
     return this.http.post<GenerationResult[]>(`${this.baseUrl}/prompt/generar`, payload, {
-      headers: this.authHeaders(),
+      headers: ApiService.authHeaders(),
     });
   }
 
   /** Construye los encabezados de autenticación si existe una sesión. */
-  private authHeaders(): HttpHeaders {
-    const token = localStorage.getItem('conclave_token');
+  private static authHeaders(): HttpHeaders {
+    const token = localStorage.getItem(ApiService.tokenStorageKey);
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 }

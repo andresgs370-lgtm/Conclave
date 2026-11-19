@@ -174,36 +174,105 @@ public class PromptService {
         } catch (Exception e) { return failed(base(AIProvider.KINOVI_AI, model, 500, start), "Error Kinovi: " + e.getMessage()); }
     }
 
+    /** Consulta el estado de una tarea de video de Kinovi hasta finalizar o agotar el tiempo límite. */
     private AIResponseDTO pollKinovi(String taskId, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) return failed(dto, "Kinovi excedió el tiempo máximo de generación.");
-        HttpResponse<String> response = get("https://kinovi.ai/api/v1/jobs/recordInfo?taskId=" + enc(taskId), Map.of("Authorization", "Bearer " + apiKey));
-        if (!ok(response)) return failed(dto, "Kinovi: " + error(response));
-        JsonObject info = JsonParser.parseString(response.body()).getAsJsonObject(); String status = stringValue(info, "status");
-        if ("success".equalsIgnoreCase(status)) { String url = outputUrl(info); if (url == null) return failed(dto, "Kinovi terminó sin URL de video: " + response.body()); return successVideo(dto, url, start); }
-        if ("fail".equalsIgnoreCase(status)) return failed(dto, firstString(info, "message", "error") == null ? "Kinovi falló: " + response.body() : firstString(info, "message", "error"));
-        Thread.sleep(POLL_MS); return pollKinovi(taskId, model, apiKey, dto, start, deadline);
+        if (System.currentTimeMillis() > deadline) {
+            return failed(dto, "Kinovi excedió el tiempo máximo de generación.");
+        }
+
+        HttpResponse<String> response = get(
+                "https://kinovi.ai/api/v1/jobs/recordInfo?taskId=" + enc(taskId),
+                Map.of("Authorization", "Bearer " + apiKey));
+        if (!ok(response)) {
+            return failed(dto, "Kinovi: " + error(response));
+        }
+
+        JsonObject info = JsonParser.parseString(response.body()).getAsJsonObject();
+        String status = stringValue(info, "status");
+        if ("success".equalsIgnoreCase(status)) {
+            String url = outputUrl(info);
+            if (url == null) {
+                return failed(dto, "Kinovi terminó sin URL de video: " + response.body());
+            }
+            return successVideo(dto, url, start);
+        }
+        if ("fail".equalsIgnoreCase(status)) {
+            String message = firstString(info, "message", "error");
+            return failed(dto, message == null ? "Kinovi falló: " + response.body() : message);
+        }
+
+        Thread.sleep(POLL_MS);
+        return pollKinovi(taskId, model, apiKey, dto, start, deadline);
     }
 
+    /** Envía una solicitud de generación de video a fal.ai y procesa su tarea asíncrona. */
     private AIResponseDTO generateFalVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis(); String model = modelOr(request.getVideoModel(), "fal-ai/wan/v2.1/1.3b/text-to-video"); String apiKey;
-        try { apiKey = key(AIProvider.FAL_AI); } catch (Exception e) { return failed(base(AIProvider.FAL_AI, model, 400, start), "Configura FAL_AI en Swagger (/admin/apikey/update/FAL_AI)."); }
+        long start = System.currentTimeMillis();
+        String model = modelOr(request.getVideoModel(), "fal-ai/wan/v2.1/1.3b/text-to-video");
+        String apiKey;
         try {
-            JsonObject body = new JsonObject(); body.addProperty("prompt", request.getPromptText());
-            HttpResponse<String> submit = post("https://queue.fal.run/" + model, Map.of("Authorization", "Key " + apiKey, "Content-Type", "application/json"), body.toString());
-            AIResponseDTO dto = base(AIProvider.FAL_AI, model, submit.statusCode(), start); if (!ok(submit)) return failed(dto, "fal.ai: " + error(submit));
-            JsonObject json = JsonParser.parseString(submit.body()).getAsJsonObject(); String requestId = stringValue(json, "request_id"); String statusUrl = stringValue(json, "status_url"); String resultUrl = stringValue(json, "response_url");
-            if (requestId == null || statusUrl == null || resultUrl == null) return failed(dto, "fal.ai no devolvió request_id/status_url/response_url: " + submit.body());
-            return pollFal(requestId, statusUrl, resultUrl, model, apiKey, dto, start, System.currentTimeMillis()+VIDEO_TIMEOUT_MS);
-        } catch (Exception e) { return failed(base(AIProvider.FAL_AI, model, 500, start), "Error fal.ai: " + e.getMessage()); }
+            apiKey = key(AIProvider.FAL_AI);
+        } catch (Exception e) {
+            return failed(base(AIProvider.FAL_AI, model, 400, start),
+                    "Configura FAL_AI en Swagger (/admin/apikey/update/FAL_AI).");
+        }
+
+        try {
+            JsonObject body = new JsonObject();
+            body.addProperty("prompt", request.getPromptText());
+            HttpResponse<String> submit = post(
+                    "https://queue.fal.run/" + model,
+                    Map.of("Authorization", "Key " + apiKey, "Content-Type", "application/json"),
+                    body.toString());
+            AIResponseDTO dto = base(AIProvider.FAL_AI, model, submit.statusCode(), start);
+            if (!ok(submit)) {
+                return failed(dto, "fal.ai: " + error(submit));
+            }
+
+            JsonObject json = JsonParser.parseString(submit.body()).getAsJsonObject();
+            String requestId = stringValue(json, "request_id");
+            String statusUrl = stringValue(json, "status_url");
+            String resultUrl = stringValue(json, "response_url");
+            if (requestId == null || statusUrl == null || resultUrl == null) {
+                return failed(dto, "fal.ai no devolvió request_id/status_url/response_url: " + submit.body());
+            }
+            long deadline = System.currentTimeMillis() + VIDEO_TIMEOUT_MS;
+            return pollFal(requestId, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
+        } catch (Exception e) {
+            return failed(base(AIProvider.FAL_AI, model, 500, start), "Error fal.ai: " + e.getMessage());
+        }
     }
 
+    /** Consulta el estado de una tarea de fal.ai y obtiene el resultado cuando termina. */
     private AIResponseDTO pollFal(String id, String statusUrl, String resultUrl, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) return failed(dto, "fal.ai excedió el tiempo máximo de generación.");
-        HttpResponse<String> status = get(statusUrl, Map.of("Authorization", "Key " + apiKey)); if (!ok(status)) return failed(dto, "fal.ai status: " + error(status));
-        JsonObject stat = JsonParser.parseString(status.body()).getAsJsonObject(); String state = stringValue(stat, "status");
-        if ("COMPLETED".equalsIgnoreCase(state)) { HttpResponse<String> result = get(resultUrl, Map.of("Authorization", "Key " + apiKey)); if (!ok(result)) return failed(dto, "fal.ai result: " + error(result)); String url = outputUrl(JsonParser.parseString(result.body()).getAsJsonObject()); if (url == null) return failed(dto, "fal.ai no devolvió URL de video: " + result.body()); return successVideo(dto, url, start); }
-        if ("FAILED".equalsIgnoreCase(state)) return failed(dto, "fal.ai falló: " + status.body());
-        Thread.sleep(POLL_MS); return pollFal(id, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
+        if (System.currentTimeMillis() > deadline) {
+            return failed(dto, "fal.ai excedió el tiempo máximo de generación.");
+        }
+
+        HttpResponse<String> status = get(statusUrl, Map.of("Authorization", "Key " + apiKey));
+        if (!ok(status)) {
+            return failed(dto, "fal.ai status: " + error(status));
+        }
+
+        JsonObject stat = JsonParser.parseString(status.body()).getAsJsonObject();
+        String state = stringValue(stat, "status");
+        if ("COMPLETED".equalsIgnoreCase(state)) {
+            HttpResponse<String> result = get(resultUrl, Map.of("Authorization", "Key " + apiKey));
+            if (!ok(result)) {
+                return failed(dto, "fal.ai result: " + error(result));
+            }
+            String url = outputUrl(JsonParser.parseString(result.body()).getAsJsonObject());
+            if (url == null) {
+                return failed(dto, "fal.ai no devolvió URL de video: " + result.body());
+            }
+            return successVideo(dto, url, start);
+        }
+        if ("FAILED".equalsIgnoreCase(state)) {
+            return failed(dto, "fal.ai falló: " + status.body());
+        }
+
+        Thread.sleep(POLL_MS);
+        return pollFal(id, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
     }
 
     private AIResponseDTO generateReplicateVideo(PromptRequestDTO request) {
@@ -230,38 +299,112 @@ public class PromptService {
     private String outputUrl(JsonObject json) { String direct = firstString(json, "video_url", "url", "download_url"); if (direct != null) return direct; if (json.has("video") && json.get("video").isJsonObject()) return firstString(json.getAsJsonObject("video"), "url"); if (json.has("output") && json.get("output").isJsonArray() && json.getAsJsonArray("output").size()>0) { var item=json.getAsJsonArray("output").get(0); if(item.isJsonPrimitive()) return item.getAsString(); if(item.isJsonObject()) return firstString(item.getAsJsonObject(), "url"); } if (json.has("output") && json.get("output").isJsonPrimitive()) return json.get("output").getAsString(); if (json.has("data") && json.get("data").isJsonObject()) return outputUrl(json.getAsJsonObject("data")); return null; }
     private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start) { dto.setStatus(ResponseStatus.SUCCESS); dto.setDownloadUrl(url); dto.setMimeType("video/mp4"); dto.setFormat(MediaFormat.MP4); dto.setDurationMs(System.currentTimeMillis()-start); return dto; }
 
+    /**
+     * Consulta el estado de la generación de Agnes AI hasta que finaliza o se agota el plazo.
+     *
+     * @param videoId identificador de la tarea de video
+     * @param model modelo utilizado para generar el video
+     * @param apiKey clave de autenticación del proveedor
+     * @param dto respuesta que se actualizará con el resultado
+     * @param start instante en que inició la generación
+     * @param deadline instante límite para completar la consulta
+     * @return respuesta con el video generado o con el detalle del fallo
+     * @throws Exception si ocurre un error durante la consulta o espera
+     */
     private AIResponseDTO pollAgnesVideo(String videoId, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) return failed(dto, "Agnes AI excedió el tiempo máximo de generación de video.");
+        if (System.currentTimeMillis() > deadline) {
+            return failed(dto, "Agnes AI excedió el tiempo máximo de generación de video.");
+        }
+
         String url = AGNES_BASE + "/agnesapi?video_id=" + enc(videoId) + "&model_name=" + enc(model);
         HttpResponse<String> response = get(url, Map.of("Authorization", "Bearer " + apiKey));
-        if (!ok(response)) return failed(dto, "Error consultando Agnes AI: " + error(response));
-        JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
-        String status = stringValue(result, "status");
-        if (status == null && result.has("data") && result.get("data").isJsonObject()) status = stringValue(result.getAsJsonObject("data"), "status");
-        if (status == null) return failed(dto, "Agnes AI devolvió una respuesta sin estado: " + response.body());
-        status = status.toLowerCase();
-        if (List.of("completed", "complete", "success", "succeeded", "done").contains(status)) {
-            String videoUrl = firstString(result, "url", "video_url", "download_url");
-            if (videoUrl == null && result.has("result") && result.get("result").isJsonObject()) videoUrl = firstString(result.getAsJsonObject("result"), "url", "video_url", "download_url");
-            if (videoUrl == null && result.has("data") && result.get("data").isJsonObject()) videoUrl = firstString(result.getAsJsonObject("data"), "url", "video_url", "download_url");
-            if (videoUrl == null || videoUrl.isBlank()) return failed(dto, "Agnes AI marcó el video como completado, pero no devolvió una URL. Respuesta: " + response.body());
-            dto.setStatus(ResponseStatus.SUCCESS); dto.setDownloadUrl(videoUrl); dto.setMimeType("video/mp4"); dto.setFormat(MediaFormat.MP4); dto.setDurationMs(System.currentTimeMillis()-start); return dto;
+        if (!ok(response)) {
+            return failed(dto, "Error consultando Agnes AI: " + error(response));
         }
-        if (List.of("failed", "failure", "error", "cancelled", "canceled").contains(status)) return failed(dto, firstString(result, "error", "message") == null ? "Agnes AI falló la generación: " + response.body() : firstString(result, "error", "message"));
+
+        JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
+        String status = agnesStatus(result);
+        if (status == null) {
+            return failed(dto, "Agnes AI devolvió una respuesta sin estado: " + response.body());
+        }
+        if (isAgnesCompleted(status)) {
+            return completeAgnesVideo(result, dto, start, response.body());
+        }
+        if (isAgnesFailed(status)) {
+            return failed(dto, agnesError(result, response.body()));
+        }
+
         Thread.sleep(POLL_MS);
         return pollAgnesVideo(videoId, model, apiKey, dto, start, deadline);
     }
 
+    /** Obtiene el estado de Agnes AI desde la respuesta principal o su objeto data. */
+    private String agnesStatus(JsonObject result) {
+        String status = stringValue(result, "status");
+        if (status == null && result.has("data") && result.get("data").isJsonObject()) {
+            status = stringValue(result.getAsJsonObject("data"), "status");
+        }
+        return status == null ? null : status.toLowerCase();
+    }
+
+    /** Indica si Agnes AI reportó que la generación terminó correctamente. */
+    private boolean isAgnesCompleted(String status) {
+        return List.of("completed", "complete", "success", "succeeded", "done").contains(status);
+    }
+
+    /** Indica si Agnes AI reportó un estado de generación fallido. */
+    private boolean isAgnesFailed(String status) {
+        return List.of("failed", "failure", "error", "cancelled", "canceled").contains(status);
+    }
+
+    /** Construye la respuesta exitosa a partir de la URL del video de Agnes AI. */
+    private AIResponseDTO completeAgnesVideo(JsonObject result, AIResponseDTO dto, long start, String responseBody) {
+        String videoUrl = agnesVideoUrl(result);
+        if (videoUrl == null || videoUrl.isBlank()) {
+            return failed(dto, "Agnes AI marcó el video como completado, pero no devolvió una URL. Respuesta: " + responseBody);
+        }
+        return successVideo(dto, videoUrl, start);
+    }
+
+    /** Busca la URL del video en los campos habituales de la respuesta de Agnes AI. */
+    private String agnesVideoUrl(JsonObject result) {
+        String videoUrl = firstString(result, "url", "video_url", "download_url");
+        if (videoUrl != null) {
+            return videoUrl;
+        }
+        if (result.has("result") && result.get("result").isJsonObject()) {
+            videoUrl = firstString(result.getAsJsonObject("result"), "url", "video_url", "download_url");
+        }
+        if (videoUrl == null && result.has("data") && result.get("data").isJsonObject()) {
+            videoUrl = firstString(result.getAsJsonObject("data"), "url", "video_url", "download_url");
+        }
+        return videoUrl;
+    }
+
+    /** Obtiene el mensaje de error de Agnes AI o utiliza el cuerpo de la respuesta. */
+    private String agnesError(JsonObject result, String responseBody) {
+        String message = firstString(result, "error", "message");
+        return message == null ? "Agnes AI falló la generación: " + responseBody : message;
+    }
+
+    /** Obtiene un campo como texto, o null si no existe o no puede convertirse. */
     private String stringValue(JsonObject object, String field) {
         if (object == null || !object.has(field) || object.get(field).isJsonNull()) return null;
         try { return object.get(field).getAsString(); } catch (Exception e) { return null; }
     }
 
+    /** Devuelve el primer campo textual no vacío de los nombres indicados. */
     private String firstString(JsonObject object, String... fields) {
-        for (String field : fields) { String value = stringValue(object, field); if (value != null && !value.isBlank()) return value; }
+        for (String field : fields) {
+            String value = stringValue(object, field);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
         return null;
     }
 
+    /** Convierte audio PCM sin encabezado en un archivo WAV con sus metadatos. */
     private byte[] pcmToWav(byte[] pcm, int sampleRate, int channels, int bits) {
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -271,7 +414,9 @@ public class PromptService {
             out.write(new byte[] {'d','a','t','a'}); writeInt(out, pcm.length); out.write(pcm); return out.toByteArray();
         } catch (IOException e) { return pcm; }
     }
+    /** Escribe un entero de 32 bits en formato little-endian. */
     private void writeInt(ByteArrayOutputStream out, int value) { out.write(value & 255); out.write((value >>> 8) & 255); out.write((value >>> 16) & 255); out.write((value >>> 24) & 255); }
+    /** Escribe un entero de 16 bits en formato little-endian. */
     private void writeShort(ByteArrayOutputStream out, int value) { out.write(value & 255); out.write((value >>> 8) & 255); }
 
     /** Recupera la API key del proveedor o lanza un error de configuración. */

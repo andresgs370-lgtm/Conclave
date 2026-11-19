@@ -1,6 +1,8 @@
 import { Component } from '@angular/core';
-import { ApiService } from '../../services/api.service';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ApiService, GenerationResult } from '../../services/api.service';
 
+/** Componente para solicitar y visualizar videos generados. */
 @Component({
   selector: 'app-videocomponent',
   standalone: false,
@@ -9,13 +11,17 @@ import { ApiService } from '../../services/api.service';
 })
 export class Videocomponent {
   prompt = '';
-  results: any[] = [];
+  results: GenerationResult[] = [];
   error = '';
   loading = false;
   format = 'MP4';
   videoProvider = 'AGNES_AI';
   videoModel = '';
+  private readonly genericError = 'No fue posible generar el contenido. Revisa la conexión con el backend.';
+  loginRequired = !localStorage.getItem('conclave_token');
 
+
+  /** Devuelve el modelo sugerido para el proveedor seleccionado. */
   modelPlaceholder(): string {
     if (this.videoProvider === 'FAL_AI') return 'fal-ai/wan/v2.1/1.3b/text-to-video';
     if (this.videoProvider === 'KINOVI_AI') return 'seedance2-5';
@@ -23,33 +29,64 @@ export class Videocomponent {
     if (this.videoProvider === 'HUGGINGFACE') return 'organization/space-name';
     return 'agnes-video-2.5-flash';
   }
-  loginRequired = !localStorage.getItem('conclave_token');
 
   constructor(private api: ApiService) {}
 
+  /** Abre los enlaces de descarga de los resultados disponibles. */
   downloadAll(): void {
-    this.results.filter(result => result.downloadUrl).forEach(result => window.open(result.downloadUrl, '_blank', 'noopener'));
+    this.results.filter(result => Boolean(result.downloadUrl)).forEach(result => window.open(result.downloadUrl, '_blank', 'noopener'));
   }
 
+  /** Comparte el prompt o lo copia si compartir no está disponible. */
   sharePrompt(): void {
     const shareText = this.prompt;
-    if (navigator.share) navigator.share({ title: 'Prompt de Conclave', text: shareText }).catch(() => {});
-    else navigator.clipboard.writeText(shareText);
+    if (navigator.share) {
+      navigator.share({ title: 'Prompt de Conclave', text: shareText }).catch((error: unknown) => this.handleShareError(error));
+    } else {
+      void navigator.clipboard.writeText(shareText);
+    }
   }
 
-  private extractError(err: any): string {
-    if (err?.status === 503) return 'Falta configurar o activar una API key requerida en el backend. Agnes AI debe estar configurado en Swagger.';
-    const body = err?.error;
+  /** Maneja errores al compartir, ignorando la cancelación del usuario. */
+  private handleShareError(error: unknown): void {
+    if (error instanceof Error && error.name !== 'AbortError') {
+      this.error = 'No fue posible compartir el prompt.';
+    }
+  }
+
+  /** Convierte un error HTTP o de conexión en un mensaje legible. */
+  private extractError(error: unknown): string {
+    if (error instanceof HttpErrorResponse && error.status === 503) {
+      return 'Falta configurar o activar una API key requerida en el backend. Agnes AI debe estar configurado en Swagger.';
+    }
+    const body = error instanceof HttpErrorResponse ? error.error : null;
+    return this.messageFromBody(body) ?? this.messageFromHttpError(error) ?? this.genericError;
+  }
+
+  /** Obtiene un mensaje legible de la respuesta del servidor. */
+  private messageFromBody(body: unknown): string | null {
     if (typeof body === 'string' && body.trim()) return body;
-    if (body?.message) return body.message;
-    if (body?.error?.message) return body.error.message;
-    if (body?.detail) return body.detail;
-    if (body?.error) return typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
-    if (err?.message) return err.message;
-    if (err?.status) return `Error HTTP ${err.status}: ${err.statusText || 'La solicitud fue rechazada por el servidor.'}`;
-    return 'No fue posible generar el contenido. Revisa la conexión con el backend.';
+    if (!body || typeof body !== 'object') return null;
+    const record = body as Record<string, unknown>;
+    if (typeof record['message'] === 'string') return record['message'];
+    if (typeof record['detail'] === 'string') return record['detail'];
+    const nested = record['error'];
+    if (typeof nested === 'string') return nested;
+    if (nested && typeof nested === 'object') {
+      const nestedMessage = (nested as Record<string, unknown>)['message'];
+      if (typeof nestedMessage === 'string') return nestedMessage;
+    }
+    return null;
   }
 
+  /** Obtiene un mensaje HTTP cuando el cuerpo no aporta detalles. */
+  private messageFromHttpError(error: unknown): string | null {
+    if (!(error instanceof HttpErrorResponse)) return null;
+    if (error.status) return `Error HTTP ${error.status}: ${error.statusText || 'La solicitud fue rechazada por el servidor.'}`;
+    return error.message || null;
+  }
+
+  /** Valida el prompt y solicita la generación del video. */
   generate(): void {
     this.error = '';
     this.results = [];
@@ -63,8 +100,16 @@ export class Videocomponent {
     }
     this.loading = true;
     this.api.generate(this.prompt, 'VIDEO', this.format, undefined, this.videoProvider, this.videoModel.trim() || this.modelPlaceholder()).subscribe({
-      next: (response) => { this.results = Array.isArray(response) ? response : []; this.loading = false; if (this.results.some(result => result.status !== 'SUCCESS')) this.error = this.results.find(result => result.errorMessage)?.errorMessage || 'La generación no pudo completarse.'; },
-      error: (err) => { this.error = this.extractError(err); this.loading = false; }
+      next: (response) => {
+        this.results = Array.isArray(response) ? response : [];
+        this.loading = false;
+        const failedResult = this.results.find(result => result.status !== 'SUCCESS');
+        if (failedResult) this.error = failedResult.errorMessage || 'La generación no pudo completarse.';
+      },
+      error: (error: unknown) => {
+        this.error = this.extractError(error);
+        this.loading = false;
+      },
     });
   }
 }
