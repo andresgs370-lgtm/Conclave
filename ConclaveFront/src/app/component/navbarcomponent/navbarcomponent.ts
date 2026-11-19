@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 
+/** Componente de navegación principal. */
 @Component({
   selector: 'app-navbarcomponent',
   standalone: false,
@@ -11,6 +12,7 @@ import { AuthService } from '../../services/auth.service';
 export class Navbarcomponent {
   constructor(public auth: AuthService, private router: Router) {}
 
+  /** Cierra la sesión y redirige al inicio. */
   logout(): void {
     this.auth.logout();
     this.router.navigate(['/']);

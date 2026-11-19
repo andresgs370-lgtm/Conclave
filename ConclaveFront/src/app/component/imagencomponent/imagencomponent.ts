@@ -16,7 +16,7 @@ interface GenerationResult {
   statusClass: string;
 }
 
-/** Component for requesting and displaying generated images. */
+/** Componente para generar y visualizar imágenes. */
 @Component({
   selector: 'app-imagencomponent',
   standalone: false,
@@ -34,12 +34,14 @@ export class Imagencomponent {
 
   constructor(private api: ApiService) {}
 
+  /** Abre los enlaces de descarga de los resultados disponibles. */
   downloadAll(): void {
     this.results
       .filter((result) => Boolean(result.downloadUrl))
       .forEach((result) => window.open(result.downloadUrl, '_blank', 'noopener'));
   }
 
+  /** Comparte el prompt o lo copia cuando Web Share no está disponible. */
   sharePrompt(): void {
     const shareText = this.prompt;
     if (navigator.share) {
@@ -47,10 +49,11 @@ export class Imagencomponent {
         // Sharing can be cancelled by the user.
       });
     } else {
-      void navigator.clipboard.writeText(shareText);
+      navigator.clipboard.writeText(shareText).catch(() => { this.error = 'No fue posible copiar el prompt.'; });
     }
   }
 
+  /** Valida la sesión y solicita la generación de imágenes. */
   generate(): void {
     this.error = '';
     this.results = [];
@@ -75,6 +78,7 @@ export class Imagencomponent {
     });
   }
 
+  /** Normaliza la respuesta del backend para mostrar cada resultado. */
   private normalizeResults(response: unknown): GenerationResult[] {
     if (!Array.isArray(response)) return [];
     return response.map((item: unknown) => {
@@ -82,29 +86,37 @@ export class Imagencomponent {
       const mimeType = result.mimeType || '';
       return {
         ...result,
-        mediaType: this.getMediaType(mimeType),
+        mediaType: Imagencomponent.getMediaType(mimeType),
         statusClass: result.status === 'SUCCESS' ? 'bg-success' : 'bg-danger',
       };
     });
   }
 
-  private getMediaType(mimeType: string): GeneratedMediaType {
+  /** Determina el tipo de contenido a partir del MIME recibido. */
+  private static getMediaType(mimeType: string): GeneratedMediaType {
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'audio';
     return 'other';
   }
 
+  /** Convierte una respuesta de error en un mensaje para el usuario. */
   private getErrorMessage(error: unknown): string {
     if (typeof error === 'string') return error;
     if (error && typeof error === 'object' && 'error' in error) {
-      const payload = (error as { error?: unknown }).error;
-      if (typeof payload === 'string') return payload;
-      if (payload && typeof payload === 'object' && 'message' in payload) {
-        const message = (payload as { message?: unknown }).message;
-        if (typeof message === 'string') return message;
-      }
+      return Imagencomponent.messageFromPayload((error as { error?: unknown }).error)
+        || 'No fue posible generar el contenido.';
     }
     return 'No fue posible generar el contenido.';
+  }
+
+  /** Extrae un mensaje de error de una respuesta del servidor. */
+  private static messageFromPayload(payload: unknown): string | null {
+    if (typeof payload === 'string') return payload;
+    if (payload && typeof payload === 'object' && 'message' in payload) {
+      const message = (payload as { message?: unknown }).message;
+      return typeof message === 'string' ? message : null;
+    }
+    return null;
   }
 }

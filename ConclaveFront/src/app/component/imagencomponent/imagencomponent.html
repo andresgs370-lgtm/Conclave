@@ -1,6 +1,6 @@
 <section class="image-page">
   <div class="container">
-    <div class="alert alert-warning" *ngIf="loginRequired">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
+    <div class="alert alert-warning" [hidden]="!(loginRequired)">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
 
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
@@ -26,10 +26,10 @@
             </select>
             <div class="hint">Puedes cambiar de proveedor en cada generación. Cada proveedor requiere su API Key configurada en Swagger.</div>
           </div>
-          <div class="note mb-4" *ngIf="imageProvider === 'CLOUDFLARE'">Cloudflare Workers AI: cuota gratuita diaria compartida entre modelos; puede agotarse.</div>
-          <div class="note mb-4" *ngIf="imageProvider === 'GEMINI'">Gemini: disponibilidad y cuota dependen del modelo y del plan de tu proyecto de Google AI Studio.</div>
+          <div class="note mb-4" [hidden]="!(imageProvider === 'CLOUDFLARE')">Cloudflare Workers AI: cuota gratuita diaria compartida entre modelos; puede agotarse.</div>
+          <div class="note mb-4" [hidden]="!(imageProvider === 'GEMINI')">Gemini: disponibilidad y cuota dependen del modelo y del plan de tu proyecto de Google AI Studio.</div>
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' 🖼️ Generar imagen ' }}</button>
-          <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
+          <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
         </div>
       </div>
       <div class="col-lg-7">
@@ -46,22 +46,22 @@
                 <path d="M21 15l-5-5L5 21"/>
               </svg>
             </div>
-            <p class="player-text" *ngIf="!results.length">Tu imagen aparecerá aquí</p>
-            <div class="w-100" *ngIf="results.length">
+            <p class="player-text" [hidden]="!(!results.length)">Tu imagen aparecerá aquí</p>
+            <div class="w-100" [hidden]="!(results.length)">
               <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <h6 class="mb-0">{{ result.model || result.provider || 'Modelo' }}</h6>
                   <span class="badge" [class]="result.statusClass">{{ result.status || 'Respuesta' }}</span>
                 </div>
-                <p *ngIf="result.textContent" class="mb-2 text-break">{{ result.textContent }}</p>
-                <p *ngIf="result.errorMessage" class="text-danger mb-2">{{ result.errorMessage }}</p>
-                <div *ngIf="result.downloadUrl" [ngSwitch]="result.mediaType">
-                  <img *ngSwitchCase="'image'" [src]="result.downloadUrl" class="img-fluid rounded mb-2" alt="Contenido generado">
-                  <video *ngSwitchCase="'video'" [src]="result.downloadUrl" controls class="w-100 mb-2"></video>
-                  <audio *ngSwitchCase="'audio'" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
+                <p [hidden]="!(result.textContent)" class="mb-2 text-break">{{ result.textContent }}</p>
+                <p [hidden]="!(result.errorMessage)" class="text-danger mb-2">{{ result.errorMessage }}</p>
+                <div [hidden]="!(result.downloadUrl)">
+                  <img [hidden]="result.mediaType !== 'image'" [src]="result.mediaType === 'image' ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video [hidden]="result.mediaType !== 'video'" [src]="result.mediaType === 'video' ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
+                  <audio [hidden]="result.mediaType !== 'audio'" [src]="result.mediaType === 'audio' ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
                   <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
                 </div>
-                <small class="text-secondary" *ngIf="result.durationMs">Tiempo: {{ result.durationMs }} ms</small>
+                <small class="text-secondary" [hidden]="!(result.durationMs)">Tiempo: {{ result.durationMs }} ms</small>
               </div>
             </div>
           </div>

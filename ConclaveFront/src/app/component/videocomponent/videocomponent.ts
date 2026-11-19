@@ -43,7 +43,7 @@ export class Videocomponent {
     if (navigator.share) {
       navigator.share({ title: 'Prompt de Conclave', text: shareText }).catch((error: unknown) => this.handleShareError(error));
     } else {
-      void navigator.clipboard.writeText(shareText);
+      navigator.clipboard.writeText(shareText).catch(() => { this.error = 'No fue posible copiar el prompt.'; });
     }
   }
 
@@ -54,33 +54,48 @@ export class Videocomponent {
     }
   }
 
+  /** Indica si el backend informó una configuración de proveedor ausente. */
+  private static isConfigurationError(error: unknown): boolean {
+    return error instanceof HttpErrorResponse && error.status === 503;
+  }
+
   /** Convierte un error HTTP o de conexión en un mensaje legible. */
   private extractError(error: unknown): string {
-    if (error instanceof HttpErrorResponse && error.status === 503) {
+    if (Videocomponent.isConfigurationError(error)) {
       return 'Falta configurar o activar una API key requerida en el backend. Agnes AI debe estar configurado en Swagger.';
     }
     const body = error instanceof HttpErrorResponse ? error.error : null;
-    return this.messageFromBody(body) ?? this.messageFromHttpError(error) ?? this.genericError;
+    return Videocomponent.messageFromBody(body) ?? Videocomponent.messageFromHttpError(error) ?? this.genericError;
   }
 
   /** Obtiene un mensaje legible de la respuesta del servidor. */
-  private messageFromBody(body: unknown): string | null {
-    if (typeof body === 'string' && body.trim()) return body;
+  private static messageFromBody(body: unknown): string | null {
+    if (typeof body === 'string') return body.trim() ? body : null;
     if (!body || typeof body !== 'object') return null;
     const record = body as Record<string, unknown>;
-    if (typeof record['message'] === 'string') return record['message'];
-    if (typeof record['detail'] === 'string') return record['detail'];
-    const nested = record['error'];
-    if (typeof nested === 'string') return nested;
-    if (nested && typeof nested === 'object') {
-      const nestedMessage = (nested as Record<string, unknown>)['message'];
-      if (typeof nestedMessage === 'string') return nestedMessage;
+    return Videocomponent.firstText(record, ['message', 'detail'])
+      ?? Videocomponent.nestedErrorMessage(record['error']);
+  }
+
+  /** Busca el primer texto disponible entre las propiedades indicadas. */
+  private static firstText(record: Record<string, unknown>, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === 'string') return value;
     }
     return null;
   }
 
+  /** Extrae el mensaje de una propiedad error anidada. */
+  private static nestedErrorMessage(value: unknown): string | null {
+    if (typeof value === 'string') return value;
+    if (!value || typeof value !== 'object') return null;
+    const nested = value as Record<string, unknown>;
+    return typeof nested['message'] === 'string' ? nested['message'] : null;
+  }
+
   /** Obtiene un mensaje HTTP cuando el cuerpo no aporta detalles. */
-  private messageFromHttpError(error: unknown): string | null {
+  private static messageFromHttpError(error: unknown): string | null {
     if (!(error instanceof HttpErrorResponse)) return null;
     if (error.status) return `Error HTTP ${error.status}: ${error.statusText || 'La solicitud fue rechazada por el servidor.'}`;
     return error.message || null;

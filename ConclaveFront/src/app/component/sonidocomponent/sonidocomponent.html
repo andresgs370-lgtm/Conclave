@@ -1,6 +1,6 @@
 <section class="sound-page">
   <div class="container">
-    <div class="alert alert-warning" *ngIf="loginRequired">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
+    <div class="alert alert-warning" [hidden]="!(loginRequired)">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
 
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
@@ -32,7 +32,7 @@
           </div>
 
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando voz...' : '🔊 Generar voz' }}</button>
-          <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
+          <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
         </div>
       </div>
 
@@ -50,18 +50,18 @@
           </div>
 
           <div class="stage">
-            <p class="player-text" *ngIf="!results.length">Tu audio aparecerá aquí</p>
-            <div class="w-100" *ngIf="results.length">
+            <p class="player-text" [hidden]="!(!results.length)">Tu audio aparecerá aquí</p>
+            <div class="w-100" [hidden]="!(results.length)">
               <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <h6 class="mb-0">{{ result.model || result.provider || 'Modelo' }}</h6>
                   <span class="badge" [class.bg-success]="result.status === 'SUCCESS'" [class.bg-danger]="result.status !== 'SUCCESS'">{{ result.status || 'Respuesta' }}</span>
                 </div>
-                <p *ngIf="result.textContent" class="mb-2 text-break">{{ result.textContent }}</p>
-                <p *ngIf="result.errorMessage" class="text-danger mb-2">{{ result.errorMessage }}</p>
-                <audio *ngIf="result.downloadUrl && result.mimeType?.startsWith('audio/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
-                <a *ngIf="result.downloadUrl" class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
-                <small class="text-secondary" *ngIf="result.durationMs">Tiempo: {{ result.durationMs }} ms</small>
+                <p [hidden]="!(result.textContent)" class="mb-2 text-break">{{ result.textContent }}</p>
+                <p [hidden]="!(result.errorMessage)" class="text-danger mb-2">{{ result.errorMessage }}</p>
+                <audio [hidden]="!(result.downloadUrl && result.mimeType?.startsWith('audio/'))" [src]="result.mimeType?.startsWith('audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
+                <a [hidden]="!(result.downloadUrl)" class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
+                <small class="text-secondary" [hidden]="!(result.durationMs)">Tiempo: {{ result.durationMs }} ms</small>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 <section class="video-page">
   <div class="container">
-    <div class="alert alert-warning" *ngIf="loginRequired">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
+    <div class="alert alert-warning" [hidden]="!(loginRequired)">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
 
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
@@ -37,14 +37,14 @@
               <option value="HUGGINGFACE">Hugging Face (Space)</option>
             </select>
           </div>
-          <div class="mb-3" *ngIf="videoProvider !== 'AGNES_AI'">
+          <div class="mb-3" [hidden]="!(videoProvider !== 'AGNES_AI')">
             <label for="videoModel" class="form-label">Modelo / endpoint</label>
             <input id="videoModel" class="form-control" [(ngModel)]="videoModel" name="videoModel" [placeholder]="modelPlaceholder()">
             <div class="hint">Puedes usar el modelo sugerido o escribir otro compatible con el proveedor.</div>
           </div>
           <div class="note mb-4">La API key del proveedor seleccionado debe configurarse por un administrador en Swagger. fal.ai, Kinovi y Replicate están integrados. Hugging Face Spaces requiere un endpoint específico y aún no tiene adaptador universal. El consumo puede generar cargos según proveedor/modelo.</div>
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando video, puede tardar varios minutos...' : ' 🎬 Generar video ' }}</button>
-          <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
+          <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
         </div>
       </div>
 
@@ -61,22 +61,22 @@
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </div>
-            <p class="player-text" *ngIf="!results.length">El video renderizado aparecerá aquí</p>
-            <div class="w-100" *ngIf="results.length">
+            <p class="player-text" [hidden]="!(!results.length)">El video renderizado aparecerá aquí</p>
+            <div class="w-100" [hidden]="!(results.length)">
               <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <h6 class="mb-0">{{ result.model || result.provider || 'Modelo' }}</h6>
                   <span class="badge" [class.bg-success]="result.status === 'SUCCESS'" [class.bg-danger]="result.status !== 'SUCCESS'">{{ result.status || 'Respuesta' }}</span>
                 </div>
-                <p *ngIf="result.textContent" class="mb-2 text-break">{{ result.textContent }}</p>
-                <p *ngIf="result.errorMessage" class="text-danger mb-2">{{ result.errorMessage }}</p>
-                <div *ngIf="result.downloadUrl">
-                  <img *ngIf="result.mimeType?.startsWith('image/')" [src]="result.downloadUrl" class="img-fluid rounded mb-2" alt="Contenido generado">
-                  <video *ngIf="result.mimeType?.startsWith('video/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></video>
-                  <audio *ngIf="result.mimeType?.startsWith('audio/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
+                <p [hidden]="!(result.textContent)" class="mb-2 text-break">{{ result.textContent }}</p>
+                <p [hidden]="!(result.errorMessage)" class="text-danger mb-2">{{ result.errorMessage }}</p>
+                <div [hidden]="!(result.downloadUrl)">
+                  <img [hidden]="!(result.mimeType?.startsWith('image/'))" [src]="result.mimeType?.startsWith('image/') ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video [hidden]="!(result.mimeType?.startsWith('video/'))" [src]="result.mimeType?.startsWith('video/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
+                  <audio [hidden]="!(result.mimeType?.startsWith('audio/'))" [src]="result.mimeType?.startsWith('audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
                   <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
                 </div>
-                <small class="text-secondary" *ngIf="result.durationMs">Tiempo: {{ result.durationMs }} ms</small>
+                <small class="text-secondary" [hidden]="!(result.durationMs)">Tiempo: {{ result.durationMs }} ms</small>
               </div>
             </div>
           </div>

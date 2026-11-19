@@ -28,6 +28,7 @@ import jakarta.persistence.Table;
 @Table(name = "useraccount")
 public class User implements UserDetails  {
 	
+	/** Inicializa la fecha de creación antes de insertar el usuario en la base de datos. */
 	@PrePersist
 	public void prePersist() {
 	    if (createdAt == null) {

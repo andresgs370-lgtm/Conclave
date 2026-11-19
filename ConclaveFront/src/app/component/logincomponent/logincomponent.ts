@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 
+/** Componente de inicio de sesión. */
 @Component({
   selector: 'app-logincomponent',
   standalone: false,
@@ -24,6 +25,7 @@ export class Logincomponent {
     });
   }
 
+  /** Envía las credenciales y establece la sesión del usuario. */
   submit(): void {
     this.error = '';
     this.success = '';

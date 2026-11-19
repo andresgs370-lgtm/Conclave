@@ -88,11 +88,17 @@ public class PromptService {
      * @param request parámetros de generación
      * @return respuesta con la imagen generada o el detalle del error
      */
+    /** Genera una imagen mediante Cloudflare Workers AI.\n     * @param request parámetros de generación\n     * @return resultado de la generación\n     */\n    /**
+     * Genera una imagen mediante Cloudflare Workers AI.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la imagen o el detalle del error
+     */
     private AIResponseDTO generateCloudflareImage(PromptRequestDTO request) {
         long start = System.currentTimeMillis();
         String credentials = key(AIProvider.CLOUDFLARE);
         String[] parts = credentials.split("\\|", 2);
-        if (parts.length != 2 || parts[0].isBlank() || parts[1].isBlank()) {
+        if (!validCloudflareCredentials(parts)) {
             return failed(base(AIProvider.CLOUDFLARE, "@cf/black-forest-labs/flux-1-schnell", 400, start),
                     "Cloudflare key inválida. Configura ACCOUNT_ID|API_TOKEN en Swagger.");
         }
@@ -108,7 +114,7 @@ public class PromptService {
         if (!ok(response)) return failed(dto, error(response));
         try {
             JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-            String imageData = json.has("image") && !json.get("image").isJsonNull() ? json.get("image").getAsString() : (json.has("result") && json.get("result").isJsonObject() && json.getAsJsonObject("result").has("image") ? json.getAsJsonObject("result").get("image").getAsString() : null);
+            String imageData = cloudflareImageData(json);
             if (imageData == null || imageData.isBlank()) return failed(dto, "Cloudflare no devolvió datos de imagen.");
             if (imageData.startsWith("data:")) {
                 dto.setMimeType(imageData.substring(5, imageData.indexOf(';')));
@@ -121,6 +127,25 @@ public class PromptService {
             dto.setStatus(ResponseStatus.SUCCESS);
             return dto;
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de imagen de Cloudflare: " + e.getMessage()); }
+    }
+
+    /** Valida que Cloudflare haya recibido el identificador y el token requeridos. */
+    private boolean validCloudflareCredentials(String[] parts) {
+        return parts.length == 2 && !parts[0].isBlank() && !parts[1].isBlank();
+    }
+
+    /** Extrae los datos de imagen de los formatos de respuesta admitidos por Cloudflare. */
+    private String cloudflareImageData(JsonObject json) {
+        if (json.has("image") && !json.get("image").isJsonNull()) {
+            return json.get("image").getAsString();
+        }
+        if (json.has("result") && json.get("result").isJsonObject()) {
+            JsonObject result = json.getAsJsonObject("result");
+            if (result.has("image") && !result.get("image").isJsonNull()) {
+                return result.get("image").getAsString();
+            }
+        }
+        return null;
     }
 
     /**
@@ -229,7 +254,7 @@ public class PromptService {
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de audio: " + e.getMessage()); }
     }
 
-    private AIResponseDTO generateVideo(PromptRequestDTO request) {
+    /** Selecciona el proveedor y delega la generación de video.\n     * @param request parámetros de generación\n     * @return respuesta del proveedor seleccionado\n     */\n    private AIResponseDTO generateVideo(PromptRequestDTO request) {
         String provider = request.getVideoProvider();
         if (provider == null || provider.isBlank() || "AGNES_AI".equalsIgnoreCase(provider)) return generateAgnesVideo(request);
         if ("KINOVI_AI".equalsIgnoreCase(provider)) return generateKinoviVideo(request);
@@ -239,29 +264,35 @@ public class PromptService {
         return failed(base(AIProvider.AGNES_AI, "video-provider", 400, System.currentTimeMillis()), "Proveedor de video no válido: " + provider);
     }
 
-    private AIResponseDTO generateAgnesVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis(); String model = "agnes-video-2.5-flash"; String apiKey;
+    /** Genera un video mediante Agnes AI.\n     * @param request parámetros de generación\n     * @return respuesta de Agnes AI\n     */\n    private AIResponseDTO generateAgnesVideo(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();\n        String model = "agnes-video-2.5-flash";\n        String apiKey;
         try { apiKey = key(AIProvider.AGNES_AI); }
         catch (Exception e) { return failed(base(AIProvider.AGNES_AI, model, 400, start), "Configura la API Key de Agnes AI en Swagger: /admin/apikey/update/AGNES_AI."); }
         try {
-            JsonObject payload = new JsonObject(); payload.addProperty("model", model); payload.addProperty("prompt", request.getPromptText()); payload.addProperty("mode", "text"); payload.addProperty("seconds", "5"); payload.addProperty("size", "720P"); payload.addProperty("aspect_ratio", "16:9");
+            JsonObject payload = new JsonObject();
+            payload.addProperty("model", model);
+            payload.addProperty("prompt", request.getPromptText());
+            payload.addProperty("mode", "text");
+            payload.addProperty("seconds", "5");
+            payload.addProperty("size", "720P");
+            payload.addProperty("aspect_ratio", "16:9");
             HttpResponse<String> create = post(AGNES_BASE + "/v1/videos", Map.of("Authorization", "Bearer " + apiKey, "Content-Type", "application/json"), payload.toString());
             AIResponseDTO dto = base(AIProvider.AGNES_AI, model, create.statusCode(), start); if (!ok(create)) return failed(dto, "Agnes AI: " + error(create));
-            JsonObject created = JsonParser.parseString(create.body()).getAsJsonObject(); String videoId = firstString(created, "video_id", "id", "task_id");
+            JsonObject created = JsonParser.parseString(create.body()).getAsJsonObject();\n            String videoId = firstString(created, "video_id", "id", "task_id");
             if (videoId == null) return failed(dto, "Agnes AI no devolvió video_id: " + create.body());
             return pollAgnesVideo(videoId, model, apiKey, dto, start, System.currentTimeMillis() + VIDEO_TIMEOUT_MS);
         } catch (Exception e) { LOGGER.log(Level.WARNING, "Agnes AI video generation failed", e); return failed(base(AIProvider.AGNES_AI, model, 500, start), "Error Agnes AI: " + e.getMessage()); }
     }
 
-    private AIResponseDTO generateKinoviVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis(); String model = modelOr(request.getVideoModel(), "seedance2-5"); String apiKey;
+    /** Genera un video mediante Kinovi AI.\n     * @param request parámetros de generación\n     * @return respuesta de Kinovi AI\n     */\n    private AIResponseDTO generateKinoviVideo(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();\n        String model = modelOr(request.getVideoModel(), "seedance2-5");\n        String apiKey;
         try { apiKey = key(AIProvider.KINOVI_AI); } catch (Exception e) { return failed(base(AIProvider.KINOVI_AI, model, 400, start), "Configura KINOVI_AI en Swagger (/admin/apikey/update/KINOVI_AI)."); }
         try {
-            JsonObject inputs = new JsonObject(); inputs.addProperty("prompt", request.getPromptText()); inputs.addProperty("duration", 5); inputs.addProperty("outputResolution", "720p");
-            JsonObject body = new JsonObject(); body.addProperty("model", model); body.add("inputs", inputs);
+            JsonObject inputs = new JsonObject();\n            inputs.addProperty("prompt", request.getPromptText());\n            inputs.addProperty("duration", 5);\n            inputs.addProperty("outputResolution", "720p");
+            JsonObject body = new JsonObject();\n            body.addProperty("model", model);\n            body.add("inputs", inputs);
             HttpResponse<String> created = post("https://kinovi.ai/api/v1/jobs/createTask", Map.of("Authorization", "Bearer " + apiKey, "Content-Type", "application/json"), body.toString());
-            AIResponseDTO dto = base(AIProvider.KINOVI_AI, model, created.statusCode(), start); if (!ok(created)) return failed(dto, "Kinovi: " + error(created));
-            String taskId = stringValue(JsonParser.parseString(created.body()).getAsJsonObject(), "taskId"); if (taskId == null) return failed(dto, "Kinovi no devolvió taskId: " + created.body());
+            AIResponseDTO dto = base(AIProvider.KINOVI_AI, model, created.statusCode(), start);\n            if (!ok(created)) return failed(dto, "Kinovi: " + error(created));
+            String taskId = stringValue(JsonParser.parseString(created.body()).getAsJsonObject(), "taskId");\n            if (taskId == null) return failed(dto, "Kinovi no devolvió taskId: " + created.body());
             return pollKinovi(taskId, model, apiKey, dto, start, System.currentTimeMillis()+VIDEO_TIMEOUT_MS);
         } catch (Exception e) { return failed(base(AIProvider.KINOVI_AI, model, 500, start), "Error Kinovi: " + e.getMessage()); }
     }
@@ -367,7 +398,7 @@ public class PromptService {
         return pollFal(id, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
     }
 
-    private AIResponseDTO generateReplicateVideo(PromptRequestDTO request) {
+    /** Genera un video mediante el endpoint de predicciones de Replicate.\n     * @param request parámetros de generación\n     * @return respuesta de Replicate\n     */\n    private AIResponseDTO generateReplicateVideo(PromptRequestDTO request) {
         long start = System.currentTimeMillis();
         String model = modelOr(request.getVideoModel(), "minimax/video-01");
         String apiKey;
