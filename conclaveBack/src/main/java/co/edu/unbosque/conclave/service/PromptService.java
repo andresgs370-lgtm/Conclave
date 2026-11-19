@@ -30,6 +30,9 @@ import co.edu.unbosque.conclave.model.MediaFormat;
 import co.edu.unbosque.conclave.model.OutputType;
 import co.edu.unbosque.conclave.model.ResponseStatus;
 
+/**
+ * Coordina la generación de imágenes, audio y video mediante proveedores externos.
+ */
 @Service
 public class PromptService {
     private static final Logger LOGGER = Logger.getLogger(PromptService.class.getName());
@@ -41,6 +44,14 @@ public class PromptService {
     @Autowired private ExternalHTTPRequestHandler externalHandler;
     @Autowired private ApiKeyService apiKeyService;
 
+    /**
+     * Genera el contenido solicitado y devuelve su respuesta.
+     *
+     * @param request parámetros de generación
+     * @return lista con el resultado del proveedor seleccionado
+     * @throws ApiKeyNotConfiguredException si falta la clave de un proveedor
+     * @throws UnsupportedOutputTypeException si el tipo de salida no está soportado
+     */
     public List<AIResponseDTO> generar(PromptRequestDTO request) throws ApiKeyNotConfiguredException, UnsupportedOutputTypeException {
         if (request == null || request.getOutputType() == null) throw new IllegalArgumentException("outputType es obligatorio");
         AIResponseDTO result = switch (request.getOutputType()) {
@@ -52,12 +63,32 @@ public class PromptService {
         return List.of(result);
     }
 
+    /**
+     * Selecciona el proveedor de imágenes y valida su identificador.
+     *
+     * @param request parámetros de generación
+     * @return respuesta de generación de imagen
+     */
     private AIResponseDTO generateImage(PromptRequestDTO request) {
         String provider = request.getImageProvider();
-        if (provider != null && "GEMINI".equalsIgnoreCase(provider.trim())) return generateGeminiImage(request);
-        if (provider != null && !provider.isBlank() && !"CLOUDFLARE".equalsIgnoreCase(provider.trim())) {
-            return failed(base(AIProvider.CLOUDFLARE, "image-provider", 400, System.currentTimeMillis()), "Proveedor de imagen no válido: " + provider);
+        if (provider != null && "GEMINI".equalsIgnoreCase(provider.trim())) {
+            return generateGeminiImage(request);
         }
+        if (provider != null && !provider.isBlank()
+                && !"CLOUDFLARE".equalsIgnoreCase(provider.trim())) {
+            return failed(base(AIProvider.CLOUDFLARE, "image-provider", 400,
+                    System.currentTimeMillis()), "Proveedor de imagen no válido: " + provider);
+        }
+        return generateCloudflareImage(request);
+    }
+
+    /**
+     * Genera una imagen mediante Cloudflare Workers AI.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la imagen generada o el detalle del error
+     */
+    private AIResponseDTO generateCloudflareImage(PromptRequestDTO request) {
         long start = System.currentTimeMillis();
         String credentials = key(AIProvider.CLOUDFLARE);
         String[] parts = credentials.split("\\|", 2);
@@ -92,46 +123,107 @@ public class PromptService {
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de imagen de Cloudflare: " + e.getMessage()); }
     }
 
-
+    /**
+     * Genera una imagen utilizando el modelo de imágenes de Gemini.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la imagen generada o el detalle del error
+     */
     private AIResponseDTO generateGeminiImage(PromptRequestDTO request) {
         long start = System.currentTimeMillis();
         String apiKey;
         try { apiKey = key(AIProvider.GEMINI); }
         catch (Exception e) { return failed(base(AIProvider.GEMINI, "gemini-2.5-flash-image", 400, start), "Configura la API Key de Gemini en Swagger."); }
         String model = "gemini-2.5-flash-image";
-        JsonObject body = new JsonObject(); JsonArray parts = new JsonArray(); JsonObject prompt = new JsonObject(); prompt.addProperty("text", request.getPromptText()); parts.add(prompt);
-        JsonObject content = new JsonObject(); content.add("parts", parts); JsonArray contents = new JsonArray(); contents.add(content); body.add("contents", contents);
-        JsonObject generationConfig = new JsonObject(); JsonArray modalities = new JsonArray(); modalities.add("TEXT"); modalities.add("IMAGE"); generationConfig.add("responseModalities", modalities); body.add("generationConfig", generationConfig);
+        JsonObject body = new JsonObject();
+        JsonArray parts = new JsonArray();
+        JsonObject prompt = new JsonObject();
+        prompt.addProperty("text", request.getPromptText());
+        parts.add(prompt);
+
+        JsonObject content = new JsonObject();
+        content.add("parts", parts);
+        JsonArray contents = new JsonArray();
+        contents.add(content);
+        body.add("contents", contents);
+
+        JsonObject generationConfig = new JsonObject();
+        JsonArray modalities = new JsonArray();
+        modalities.add("TEXT");
+        modalities.add("IMAGE");
+        generationConfig.add("responseModalities", modalities);
+        body.add("generationConfig", generationConfig);
         HttpResponse<String> response = post(GEMINI_BASE + model + ":generateContent", Map.of("Content-Type", "application/json", "x-goog-api-key", apiKey), body.toString());
         AIResponseDTO dto = base(AIProvider.GEMINI, model, response.statusCode(), start);
         if (!ok(response)) return failed(dto, error(response));
         try {
             JsonArray outParts = JsonParser.parseString(response.body()).getAsJsonObject().getAsJsonArray("candidates").get(0).getAsJsonObject().getAsJsonObject("content").getAsJsonArray("parts");
             for (var part : outParts) if (part.isJsonObject() && part.getAsJsonObject().has("inlineData")) {
-                JsonObject data = part.getAsJsonObject().getAsJsonObject("inlineData"); String mime = data.has("mimeType") ? data.get("mimeType").getAsString() : "image/png";
-                String base64 = data.get("data").getAsString(); dto.setMimeType(mime); dto.setDownloadUrl("data:" + mime + ";base64," + base64); dto.setFormat(request.getFormat() == null ? MediaFormat.PNG : request.getFormat()); dto.setStatus(ResponseStatus.SUCCESS); return dto;
+                JsonObject data = part.getAsJsonObject().getAsJsonObject("inlineData");
+                String mime = data.has("mimeType") ? data.get("mimeType").getAsString() : "image/png";
+                String base64 = data.get("data").getAsString();
+                dto.setMimeType(mime);
+                dto.setDownloadUrl("data:" + mime + ";base64," + base64);
+                dto.setFormat(request.getFormat() == null ? MediaFormat.PNG : request.getFormat());
+                dto.setStatus(ResponseStatus.SUCCESS);
+                return dto;
             }
             return failed(dto, "Gemini no devolvió datos de imagen. Respuesta: " + response.body());
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de imagen de Gemini: " + e.getMessage()); }
     }
 
+    /**
+     * Genera audio hablado a partir del texto solicitado mediante Gemini.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con el audio generado o el detalle del error
+     */
     private AIResponseDTO generateAudio(PromptRequestDTO request) {
-        long start = System.currentTimeMillis(); String key = key(AIProvider.GEMINI); String model = "gemini-2.5-flash-preview-tts";
-        JsonObject body = new JsonObject(); JsonArray parts = new JsonArray(); JsonObject text = new JsonObject(); text.addProperty("text", "Read this text aloud naturally in Spanish: " + request.getPromptText()); parts.add(text);
-        JsonObject content = new JsonObject(); content.add("parts", parts); JsonArray contents = new JsonArray(); contents.add(content); body.add("contents", contents);
-        JsonObject config = new JsonObject(); JsonArray modalities = new JsonArray(); modalities.add("AUDIO"); config.add("responseModalities", modalities);
-        JsonObject speech = new JsonObject(); JsonObject voiceConfig = new JsonObject(); JsonObject prebuilt = new JsonObject(); prebuilt.addProperty("voiceName", "Kore"); voiceConfig.add("prebuiltVoiceConfig", prebuilt); speech.add("voiceConfig", voiceConfig); config.add("speechConfig", speech); body.add("generationConfig", config);
+        long start = System.currentTimeMillis();
+        String key = key(AIProvider.GEMINI);
+        String model = "gemini-2.5-flash-preview-tts";
+
+        JsonObject body = new JsonObject();
+        JsonArray parts = new JsonArray();
+        JsonObject text = new JsonObject();
+        text.addProperty("text", "Read this text aloud naturally in Spanish: " + request.getPromptText());
+        parts.add(text);
+
+        JsonObject content = new JsonObject();
+        content.add("parts", parts);
+        JsonArray contents = new JsonArray();
+        contents.add(content);
+        body.add("contents", contents);
+
+        JsonObject config = new JsonObject();
+        JsonArray modalities = new JsonArray();
+        modalities.add("AUDIO");
+        config.add("responseModalities", modalities);
+
+        JsonObject speech = new JsonObject();
+        JsonObject voiceConfig = new JsonObject();
+        JsonObject prebuilt = new JsonObject();
+        prebuilt.addProperty("voiceName", "Kore");
+        voiceConfig.add("prebuiltVoiceConfig", prebuilt);
+        speech.add("voiceConfig", voiceConfig);
+        config.add("speechConfig", speech);
+        body.add("generationConfig", config);
         HttpResponse<String> response = post(GEMINI_BASE + model + ":generateContent", Map.of("Content-Type", "application/json", "x-goog-api-key", key), body.toString());
         AIResponseDTO dto = base(AIProvider.GEMINI, model, response.statusCode(), start);
         if (!ok(response)) return failed(dto, error(response));
         try {
             JsonArray outParts = JsonParser.parseString(response.body()).getAsJsonObject().getAsJsonArray("candidates").get(0).getAsJsonObject().getAsJsonObject("content").getAsJsonArray("parts");
             for (var p : outParts) if (p.isJsonObject() && p.getAsJsonObject().has("inlineData")) {
-                JsonObject data = p.getAsJsonObject().getAsJsonObject("inlineData"); String mime = data.get("mimeType").getAsString();
+                JsonObject data = p.getAsJsonObject().getAsJsonObject("inlineData");
+                String mime = data.get("mimeType").getAsString();
                 byte[] audioBytes = Base64.getDecoder().decode(data.get("data").getAsString());
                 if (mime.toLowerCase().contains("l16") || mime.toLowerCase().contains("pcm")) audioBytes = pcmToWav(audioBytes, 24000, 1, 16);
                 String outMime = mime.toLowerCase().contains("l16") || mime.toLowerCase().contains("pcm") ? "audio/wav" : mime;
-                dto.setMimeType(outMime); dto.setFormat(MediaFormat.WAV); dto.setDownloadUrl("data:" + outMime + ";base64," + Base64.getEncoder().encodeToString(audioBytes)); dto.setStatus(ResponseStatus.SUCCESS); return dto;
+                dto.setMimeType(outMime);
+                dto.setFormat(MediaFormat.WAV);
+                dto.setDownloadUrl("data:" + outMime + ";base64," + Base64.getEncoder().encodeToString(audioBytes));
+                dto.setStatus(ResponseStatus.SUCCESS);
+                return dto;
             }
             return failed(dto, "Gemini no devolvió datos de audio.");
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de audio: " + e.getMessage()); }

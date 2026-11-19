@@ -1,5 +1,8 @@
 package co.edu.unbosque.conclave.model;
 
+/**
+ * Proveedores externos utilizados para generar contenido multimedia.
+ */
 public enum AIProvider {
     OPENROUTER("OpenRouter (legacy)"),
     GEMINI("Google Gemini"),
@@ -12,6 +15,21 @@ public enum AIProvider {
     HUGGINGFACE("Hugging Face (Video Generation)");
 
     private final String displayName;
-    AIProvider(String displayName) { this.displayName = displayName; }
-    public String getDisplayName() { return displayName; }
+    /**
+     * Crea un proveedor con el nombre que se muestra en la interfaz.
+     *
+     * @param displayName nombre visible del proveedor
+     */
+    AIProvider(String displayName) {
+        this.displayName = displayName;
+    }
+
+    /**
+     * Obtiene el nombre visible del proveedor.
+     *
+     * @return nombre del proveedor
+     */
+    public String getDisplayName() {
+        return displayName;
+    }
 }
