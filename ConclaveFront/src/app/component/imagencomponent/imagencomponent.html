@@ -8,25 +8,16 @@
       <p class="page-sub">Describe tu idea y genera una imagen con Cloudflare Workers AI.</p>
     </div>
 
-    <div class="row g-4">
 
+    <div class="row g-4">
       <div class="col-lg-5">
         <div class="panel animate__animated animate__fadeInLeft">
-
           <div class="mb-4">
             <label for="prompt" class="form-label">Tu prompt</label>
-            <textarea
-              id="prompt"
-              class="form-control"
-              name="prompt"
-              [(ngModel)]="prompt"
-              rows="5"
+            <textarea id="prompt" class="form-control" name="prompt" [(ngModel)]="prompt" rows="5"
               placeholder="Un gato astronauta flotando en una galaxia de colores, estilo ilustración digital..."></textarea>
             <div class="hint">Mientras más detalles des, mejor será el resultado.</div>
           </div>
-
-
-
           <div class="mb-3">
             <label for="imageProvider" class="form-label">Proveedor de generación</label>
             <select id="imageProvider" class="form-select" [(ngModel)]="imageProvider" name="imageProvider">
@@ -41,14 +32,12 @@
           <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
         </div>
       </div>
-
       <div class="col-lg-7">
         <div class="panel animate__animated animate__fadeInRight">
           <div class="panel-top">
             <h5 class="panel-title">Vista previa</h5>
             <span class="status">{{ loading ? 'Generando' : results.length ? 'Resultado' : 'Sin generar' }}</span>
           </div>
-
           <div class="player">
             <div class="play-btn">
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -62,21 +51,20 @@
               <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <h6 class="mb-0">{{ result.model || result.provider || 'Modelo' }}</h6>
-                  <span class="badge" [class.bg-success]="result.status === 'SUCCESS'" [class.bg-danger]="result.status !== 'SUCCESS'">{{ result.status || 'Respuesta' }}</span>
+                  <span class="badge" [class]="result.statusClass">{{ result.status || 'Respuesta' }}</span>
                 </div>
                 <p *ngIf="result.textContent" class="mb-2 text-break">{{ result.textContent }}</p>
                 <p *ngIf="result.errorMessage" class="text-danger mb-2">{{ result.errorMessage }}</p>
-                <div *ngIf="result.downloadUrl">
-                  <img *ngIf="result.mimeType?.startsWith('image/')" [src]="result.downloadUrl" class="img-fluid rounded mb-2" alt="Contenido generado">
-                  <video *ngIf="result.mimeType?.startsWith('video/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></video>
-                  <audio *ngIf="result.mimeType?.startsWith('audio/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
+                <div *ngIf="result.downloadUrl" [ngSwitch]="result.mediaType">
+                  <img *ngSwitchCase="'image'" [src]="result.downloadUrl" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video *ngSwitchCase="'video'" [src]="result.downloadUrl" controls class="w-100 mb-2"></video>
+                  <audio *ngSwitchCase="'audio'" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
                   <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
                 </div>
                 <small class="text-secondary" *ngIf="result.durationMs">Tiempo: {{ result.durationMs }} ms</small>
               </div>
             </div>
           </div>
-
           <div class="actions">
             <button type="button" class="btn btn-outline-light" (click)="prompt = ''; results = []; error = ''">Nueva generación</button>
             <button type="button" class="btn btn-outline-light" (click)="downloadAll()" [disabled]="!results.length">Descargar resultados</button>
@@ -85,7 +73,5 @@
         </div>
       </div>
     </div>
-
-
   </div>
 </section>

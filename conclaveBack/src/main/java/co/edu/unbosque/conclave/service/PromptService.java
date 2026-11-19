@@ -274,12 +274,72 @@ public class PromptService {
     private void writeInt(ByteArrayOutputStream out, int value) { out.write(value & 255); out.write((value >>> 8) & 255); out.write((value >>> 16) & 255); out.write((value >>> 24) & 255); }
     private void writeShort(ByteArrayOutputStream out, int value) { out.write(value & 255); out.write((value >>> 8) & 255); }
 
-    private String key(AIProvider provider) { try { return apiKeyService.getDecryptedKey(provider); } catch (Exception e) { throw new IllegalStateException("Configura la API key de " + provider.getDisplayName() + " en Swagger: /admin/apikey/update/" + provider, e); } }
-    private HttpResponse<String> post(String url, Map<String,String> headers, String body) { return externalHandler.doPostAsync(url, headers, body).join(); }
-    private HttpResponse<String> get(String url, Map<String,String> headers) { return externalHandler.doGetAsync(url, headers).join(); }
-    private boolean ok(HttpResponse<String> r) { return r.statusCode() >= 200 && r.statusCode() < 300; }
-    private String error(HttpResponse<String> r) { try { JsonObject j=JsonParser.parseString(r.body()).getAsJsonObject(); if(j.has("error")) { var e=j.get("error"); if(e.isJsonObject() && e.getAsJsonObject().has("message")) return e.getAsJsonObject().get("message").getAsString(); return e.toString(); } if(j.has("message")) return j.get("message").getAsString(); } catch(Exception ignored) {} return "HTTP " + r.statusCode() + ": " + r.body(); }
-    private String enc(String value) { return URLEncoder.encode(value, StandardCharsets.UTF_8); }
-    private AIResponseDTO base(AIProvider provider, String model, int status, long start) { AIResponseDTO d=new AIResponseDTO(); d.setProvider(provider); d.setModel(model); d.setHttpStatus(status); d.setDurationMs(System.currentTimeMillis()-start); return d; }
-    private AIResponseDTO failed(AIResponseDTO d, String message) { d.setStatus(ResponseStatus.FAILED); d.setErrorMessage(message == null ? "Error sin detalle" : message); return d; }
+    /** Recupera la API key del proveedor o lanza un error de configuración. */
+    private String key(AIProvider provider) {
+        try {
+            return apiKeyService.getDecryptedKey(provider);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Configura la API key de " + provider.getDisplayName()
+                    + " en Swagger: /admin/apikey/update/" + provider, e);
+        }
+    }
+
+    /** Ejecuta una solicitud POST y espera su respuesta. */
+    private HttpResponse<String> post(String url, Map<String, String> headers, String body) {
+        return externalHandler.doPostAsync(url, headers, body).join();
+    }
+
+    /** Ejecuta una solicitud GET y espera su respuesta. */
+    private HttpResponse<String> get(String url, Map<String, String> headers) {
+        return externalHandler.doGetAsync(url, headers).join();
+    }
+
+    /** Indica si el código HTTP representa una respuesta exitosa. */
+    private boolean ok(HttpResponse<String> response) {
+        return response.statusCode() >= 200 && response.statusCode() < 300;
+    }
+
+    /** Extrae un mensaje de error del cuerpo HTTP, si existe. */
+    private String error(HttpResponse<String> response) {
+        try {
+            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+            if (json.has("error")) {
+                JsonObject errorObject = json.get("error").isJsonObject()
+                        ? json.getAsJsonObject("error") : null;
+                if (errorObject != null && errorObject.has("message")) {
+                    return errorObject.get("message").getAsString();
+                }
+                return json.get("error").toString();
+            }
+            if (json.has("message")) {
+                return json.get("message").getAsString();
+            }
+        } catch (Exception parseException) {
+            LOGGER.log(Level.FINE, "La respuesta HTTP no contiene JSON de error", parseException);
+        }
+        return "HTTP " + response.statusCode() + ": " + response.body();
+    }
+
+    /** Codifica un valor para usarlo en un parámetro URL. */
+    private String enc(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    /** Crea una respuesta base con metadatos del proveedor y duración. */
+    private AIResponseDTO base(AIProvider provider, String model, int status, long start) {
+        AIResponseDTO dto = new AIResponseDTO();
+        dto.setProvider(provider);
+        dto.setModel(model);
+        dto.setHttpStatus(status);
+        dto.setDurationMs(System.currentTimeMillis() - start);
+        return dto;
+    }
+
+    /** Marca una respuesta como fallida y agrega el detalle del error. */
+    private AIResponseDTO failed(AIResponseDTO dto, String message) {
+        dto.setStatus(ResponseStatus.FAILED);
+        dto.setErrorMessage(message == null ? "Error sin detalle" : message);
+        return dto;
+    }
 }
