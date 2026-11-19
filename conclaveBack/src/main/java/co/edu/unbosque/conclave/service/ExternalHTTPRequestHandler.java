@@ -53,6 +53,7 @@ public class ExternalHTTPRequestHandler {
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
+				.timeout(Duration.ofSeconds(60))
 				.POST(HttpRequest.BodyPublishers.ofString(jsonBody));
 
 		headers.forEach(builder::header);
@@ -72,6 +73,7 @@ public class ExternalHTTPRequestHandler {
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
+				.timeout(Duration.ofSeconds(60))
 				.GET();
 
 		headers.forEach(builder::header);
@@ -91,6 +93,7 @@ public class ExternalHTTPRequestHandler {
 
 		HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.uri(URI.create(url))
+				.timeout(Duration.ofSeconds(60))
 				.GET();
 
 		headers.forEach(builder::header);

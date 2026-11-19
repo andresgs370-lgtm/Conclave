@@ -12,7 +12,7 @@ export class Sonidocomponent {
   results: any[] = [];
   error = '';
   loading = false;
-  format = 'MP3';
+  format = 'WAV';
   loginRequired = !localStorage.getItem('conclave_token');
 
   constructor(private api: ApiService) {}

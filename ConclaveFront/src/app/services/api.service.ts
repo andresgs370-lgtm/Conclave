@@ -22,9 +22,9 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/user/me`, { headers });
   }
 
-  generate(promptText: string, outputType: string, format?: string): Observable<any> {
+  generate(promptText: string, outputType: string, format?: string, imageProvider?: string, videoProvider?: string, videoModel?: string): Observable<any> {
     const token = localStorage.getItem('conclave_token');
     const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
-    return this.http.post(`${this.baseUrl}/prompt/generar`, { promptText, outputType, format: format || null }, { headers });
+    return this.http.post(`${this.baseUrl}/prompt/generar`, { promptText, outputType, format: format || null, imageProvider: imageProvider || null, videoProvider: videoProvider || null, videoModel: videoModel || null }, { headers });
   }
 }

@@ -5,7 +5,7 @@
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
       <h1 class="page-title">Crear imagen</h1>
-      <p class="page-sub">Describe tu idea, elige un modelo y genera tu imagen.</p>
+      <p class="page-sub">Describe tu idea y genera una imagen con Cloudflare Workers AI.</p>
     </div>
 
     <div class="row g-4">
@@ -27,45 +27,16 @@
 
 
 
-          <div class="mb-4">
-            <span class="form-label d-block">Cantidad</span>
-            <div class="chips">
-              <input type="radio" class="btn-check" name="cantidad" id="cant-1" checked>
-              <label class="chip" for="cant-1">1 imagen</label>
-              <input type="radio" class="btn-check" name="cantidad" id="cant-2">
-              <label class="chip" for="cant-2">2 imágenes</label>
-              <input type="radio" class="btn-check" name="cantidad" id="cant-4">
-              <label class="chip" for="cant-4">4 imágenes</label>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <span class="form-label d-block">Formato</span>
-            <div class="chips">
-              <input type="radio" class="btn-check" name="formato" id="fmt-11" checked>
-              <label class="chip" for="fmt-11">1:1 Cuadrado</label>
-              <input type="radio" class="btn-check" name="formato" id="fmt-169">
-              <label class="chip" for="fmt-169">16:9 Horizontal</label>
-              <input type="radio" class="btn-check" name="formato" id="fmt-916">
-              <label class="chip" for="fmt-916">9:16 Vertical</label>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label for="estilo" class="form-label">Estilo</label>
-            <select id="estilo" class="form-select">
-              <option>Realista</option>
-              <option>Ilustración digital</option>
-              <option>Óleo</option>
-              <option>Minimalista</option>
+          <div class="mb-3">
+            <label for="imageProvider" class="form-label">Proveedor de generación</label>
+            <select id="imageProvider" class="form-select" [(ngModel)]="imageProvider" name="imageProvider">
+              <option value="CLOUDFLARE">Cloudflare — FLUX.1 schnell (cuota gratuita)</option>
+              <option value="GEMINI">Google Gemini — generación de imágenes</option>
             </select>
+            <div class="hint">Puedes cambiar de proveedor en cada generación. Cada proveedor requiere su API Key configurada en Swagger.</div>
           </div>
-
-          <div class="note">
-            <span class="ai-no">✖ Estos modelos no generan audio ni video.</span>
-          </div>
-
-          <div class="mb-4"><label class="form-label" for="output-format">Formato de salida</label><select id="output-format" class="form-select" [(ngModel)]="format"><option>PNG</option><option>JPEG</option><option>WEBP</option></select></div>
+          <div class="note mb-4" *ngIf="imageProvider === 'CLOUDFLARE'">Cloudflare Workers AI: cuota gratuita diaria compartida entre modelos; puede agotarse.</div>
+          <div class="note mb-4" *ngIf="imageProvider === 'GEMINI'">Gemini: disponibilidad y cuota dependen del modelo y del plan de tu proyecto de Google AI Studio.</div>
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' 🖼️ Generar imagen ' }}</button>
           <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
         </div>
@@ -75,7 +46,7 @@
         <div class="panel animate__animated animate__fadeInRight">
           <div class="panel-top">
             <h5 class="panel-title">Vista previa</h5>
-            <span class="status">Sin generar</span>
+            <span class="status">{{ loading ? 'Generando' : results.length ? 'Resultado' : 'Sin generar' }}</span>
           </div>
 
           <div class="player">

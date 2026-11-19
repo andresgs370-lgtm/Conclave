@@ -13,6 +13,7 @@ export class Imagencomponent {
   error = '';
   loading = false;
   format = 'PNG';
+  imageProvider = 'CLOUDFLARE';
   loginRequired = !localStorage.getItem('conclave_token');
 
   constructor(private api: ApiService) {}
@@ -39,7 +40,7 @@ export class Imagencomponent {
       return;
     }
     this.loading = true;
-    this.api.generate(this.prompt, 'IMAGE', this.format).subscribe({
+    this.api.generate(this.prompt, 'IMAGE', this.format, this.imageProvider).subscribe({
       next: (response) => { this.results = Array.isArray(response) ? response : []; this.loading = false; },
       error: (err) => { this.error = typeof err.error === 'string' ? err.error : err.error?.message || 'No fue posible generar el contenido.'; this.loading = false; }
     });

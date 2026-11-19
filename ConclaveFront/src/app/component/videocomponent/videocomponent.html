@@ -5,7 +5,7 @@
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
       <h1 class="page-title">Crear video</h1>
-      <p class="page-sub">Describe tu idea, elige un modelo y genera tu clip.</p>
+      <p class="page-sub">Describe tu idea y Agnes AI generará un clip de video con inteligencia artificial.</p>
     </div>
 
     <div class="row g-4">
@@ -27,46 +27,23 @@
 
 
 
-          <div class="mb-4">
-            <span class="form-label d-block">Duración</span>
-            <div class="chips">
-              <input type="radio" class="btn-check" name="duracion" id="dur-5" checked>
-              <label class="chip" for="dur-5">5 s</label>
-              <input type="radio" class="btn-check" name="duracion" id="dur-10">
-              <label class="chip" for="dur-10">10 s</label>
-              <input type="radio" class="btn-check" name="duracion" id="dur-15">
-              <label class="chip" for="dur-15">15 s</label>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <span class="form-label d-block">Formato</span>
-            <div class="chips">
-              <input type="radio" class="btn-check" name="formato" id="fmt-169" checked>
-              <label class="chip" for="fmt-169">16:9 Horizontal</label>
-              <input type="radio" class="btn-check" name="formato" id="fmt-916">
-              <label class="chip" for="fmt-916">9:16 Vertical</label>
-              <input type="radio" class="btn-check" name="formato" id="fmt-11">
-              <label class="chip" for="fmt-11">1:1 Cuadrado</label>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label for="estilo" class="form-label">Estilo</label>
-            <select id="estilo" class="form-select">
-              <option>Realista</option>
-              <option>Cinematográfico</option>
-              <option>Animación</option>
-              <option>Minimalista</option>
+          <div class="mb-3">
+            <label for="videoProvider" class="form-label">Proveedor de video</label>
+            <select id="videoProvider" class="form-select" [(ngModel)]="videoProvider" name="videoProvider">
+              <option value="AGNES_AI">Agnes AI</option>
+              <option value="FAL_AI">fal.ai</option>
+              <option value="KINOVI_AI">Kinovi AI</option>
+              <option value="REPLICATE">Replicate</option>
+              <option value="HUGGINGFACE">Hugging Face (Space)</option>
             </select>
           </div>
-
-          <div class="note">
-            <span class="ai-no">✖ Estos modelos no generan audio ni música.</span>
+          <div class="mb-3" *ngIf="videoProvider !== 'AGNES_AI'">
+            <label for="videoModel" class="form-label">Modelo / endpoint</label>
+            <input id="videoModel" class="form-control" [(ngModel)]="videoModel" name="videoModel" [placeholder]="modelPlaceholder()">
+            <div class="hint">Puedes usar el modelo sugerido o escribir otro compatible con el proveedor.</div>
           </div>
-
-          <div class="mb-4"><label class="form-label" for="output-format">Formato de salida</label><select id="output-format" class="form-select" [(ngModel)]="format"><option>MP4</option><option>WEBM</option></select></div>
-          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' 🎬 Generar video ' }}</button>
+          <div class="note mb-4">La API key del proveedor seleccionado debe configurarse por un administrador en Swagger. fal.ai, Kinovi y Replicate están integrados. Hugging Face Spaces requiere un endpoint específico y aún no tiene adaptador universal. El consumo puede generar cargos según proveedor/modelo.</div>
+          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando video, puede tardar varios minutos...' : ' 🎬 Generar video ' }}</button>
           <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
         </div>
       </div>
@@ -75,7 +52,7 @@
         <div class="panel animate__animated animate__fadeInRight">
           <div class="panel-top">
             <h5 class="panel-title">Vista previa</h5>
-            <span class="status">Sin generar</span>
+            <span class="status">{{ loading ? 'Renderizando' : results.length ? 'Resultado' : 'Sin generar' }}</span>
           </div>
 
           <div class="player">
@@ -84,7 +61,7 @@
                 <path d="M8 5v14l11-7z"/>
               </svg>
             </div>
-            <p class="player-text" *ngIf="!results.length">Tu video aparecerá aquí</p>
+            <p class="player-text" *ngIf="!results.length">El video renderizado aparecerá aquí</p>
             <div class="w-100" *ngIf="results.length">
               <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
                 <div class="d-flex justify-content-between align-items-center mb-2">

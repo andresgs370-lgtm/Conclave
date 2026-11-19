@@ -5,46 +5,13 @@
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
       <h1 class="page-title">Crear sonido</h1>
-      <p class="page-sub">Describe lo que quieres escuchar y genera música, voces o efectos.</p>
+      <p class="page-sub">Escribe el texto que quieres convertir en voz. La generación utiliza Gemini TTS.</p>
     </div>
 
     <div class="row g-4">
 
       <div class="col-lg-5">
         <div class="panel animate__animated animate__fadeInLeft">
-
-          <div class="mb-4">
-            <span class="form-label d-block">Tipo de sonido</span>
-            <div class="row g-2">
-              <div class="col-4">
-                <input type="radio" class="btn-check" name="tipo" id="tipo-musica" checked>
-                <label class="type-option" for="tipo-musica">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-                  </svg>
-                  <strong>Música</strong>
-                </label>
-              </div>
-              <div class="col-4">
-                <input type="radio" class="btn-check" name="tipo" id="tipo-voz">
-                <label class="type-option" for="tipo-voz">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/>
-                  </svg>
-                  <strong>Voz</strong>
-                </label>
-              </div>
-              <div class="col-4">
-                <input type="radio" class="btn-check" name="tipo" id="tipo-efectos">
-                <label class="type-option" for="tipo-efectos">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 11v2"/>
-                  </svg>
-                  <strong>Efectos</strong>
-                </label>
-              </div>
-            </div>
-          </div>
 
           <div class="mb-4">
             <label for="prompt" class="form-label">Tu prompt</label>
@@ -54,42 +21,18 @@
               name="prompt"
               [(ngModel)]="prompt"
               rows="4"
-              placeholder="Una canción suave de piano con lluvia de fondo, ideal para estudiar..."></textarea>
-            <div class="hint">Menciona el ánimo, los instrumentos y el ritmo.</div>
+              placeholder="Escribe el texto que quieres escuchar narrado en español..."></textarea>
+            <div class="hint">Gemini convertirá el texto en voz; no genera música ni efectos de sonido.</div>
           </div>
 
 
-
-          <div class="mb-4">
-            <span class="form-label d-block">Duración</span>
-            <div class="chips">
-              <input type="radio" class="btn-check" name="duracion" id="dur-15" checked>
-              <label class="chip" for="dur-15">15 s</label>
-              <input type="radio" class="btn-check" name="duracion" id="dur-30">
-              <label class="chip" for="dur-30">30 s</label>
-              <input type="radio" class="btn-check" name="duracion" id="dur-60">
-              <label class="chip" for="dur-60">1 min</label>
-              <input type="radio" class="btn-check" name="duracion" id="dur-120">
-              <label class="chip" for="dur-120">2 min</label>
-            </div>
-          </div>
-
-          <div class="mb-4">
-            <label for="genero" class="form-label">Género o estilo</label>
-            <select id="genero" class="form-select">
-              <option>Lo-fi</option>
-              <option>Pop</option>
-              <option>Electrónica</option>
-              <option>Acústico</option>
-              <option>Cinematográfico</option>
-            </select>
-          </div>
 
           <div class="note">
             <span class="ai-no">✖ Estos modelos no generan imágenes ni video.</span>
           </div>
 
-          <button type="button" class="btn btn-primary btn-lg w-100">🎵 Generar sonido</button>
+          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando voz...' : '🔊 Generar voz' }}</button>
+          <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
         </div>
       </div>
 
@@ -103,7 +46,7 @@
               </div>
               <h5 class="panel-title">Estudio</h5>
             </div>
-            <span class="status">Resultados de generación</span>
+            <span class="status">{{ loading ? 'Generando voz' : results.length ? 'Resultado' : 'Sin generar' }}</span>
           </div>
 
           <div class="stage">

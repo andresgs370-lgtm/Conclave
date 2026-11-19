@@ -13,6 +13,16 @@ export class Videocomponent {
   error = '';
   loading = false;
   format = 'MP4';
+  videoProvider = 'AGNES_AI';
+  videoModel = '';
+
+  modelPlaceholder(): string {
+    if (this.videoProvider === 'FAL_AI') return 'fal-ai/wan/v2.1/1.3b/text-to-video';
+    if (this.videoProvider === 'KINOVI_AI') return 'seedance2-5';
+    if (this.videoProvider === 'REPLICATE') return 'owner/model';
+    if (this.videoProvider === 'HUGGINGFACE') return 'organization/space-name';
+    return 'agnes-video-2.5-flash';
+  }
   loginRequired = !localStorage.getItem('conclave_token');
 
   constructor(private api: ApiService) {}
@@ -27,6 +37,19 @@ export class Videocomponent {
     else navigator.clipboard.writeText(shareText);
   }
 
+  private extractError(err: any): string {
+    if (err?.status === 503) return 'Falta configurar o activar una API key requerida en el backend. Agnes AI debe estar configurado en Swagger.';
+    const body = err?.error;
+    if (typeof body === 'string' && body.trim()) return body;
+    if (body?.message) return body.message;
+    if (body?.error?.message) return body.error.message;
+    if (body?.detail) return body.detail;
+    if (body?.error) return typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
+    if (err?.message) return err.message;
+    if (err?.status) return `Error HTTP ${err.status}: ${err.statusText || 'La solicitud fue rechazada por el servidor.'}`;
+    return 'No fue posible generar el contenido. Revisa la conexión con el backend.';
+  }
+
   generate(): void {
     this.error = '';
     this.results = [];
@@ -39,9 +62,9 @@ export class Videocomponent {
       return;
     }
     this.loading = true;
-    this.api.generate(this.prompt, 'VIDEO', this.format).subscribe({
-      next: (response) => { this.results = Array.isArray(response) ? response : []; this.loading = false; },
-      error: (err) => { this.error = typeof err.error === 'string' ? err.error : err.error?.message || 'No fue posible generar el contenido.'; this.loading = false; }
+    this.api.generate(this.prompt, 'VIDEO', this.format, undefined, this.videoProvider, this.videoModel.trim() || this.modelPlaceholder()).subscribe({
+      next: (response) => { this.results = Array.isArray(response) ? response : []; this.loading = false; if (this.results.some(result => result.status !== 'SUCCESS')) this.error = this.results.find(result => result.errorMessage)?.errorMessage || 'La generación no pudo completarse.'; },
+      error: (err) => { this.error = this.extractError(err); this.loading = false; }
     });
   }
 }
