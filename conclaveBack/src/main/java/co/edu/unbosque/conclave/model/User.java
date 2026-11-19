@@ -1,5 +1,13 @@
 package co.edu.unbosque.conclave.model;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Objects;
+
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,14 +15,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * Entidad que representa un usuario del sistema.
@@ -25,6 +27,14 @@ import java.util.Objects;
 @Entity
 @Table(name = "useraccount")
 public class User implements UserDetails  {
+	
+	/** Inicializa la fecha de creación antes de insertar el usuario en la base de datos. */
+	@PrePersist
+	public void prePersist() {
+	    if (createdAt == null) {
+	        createdAt = LocalDateTime.now();
+	    }
+	}
 	
 	/** Número de versión para la serialización. */
 	private static final long serialVersionUID = 1L;

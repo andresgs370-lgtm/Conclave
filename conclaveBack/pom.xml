@@ -63,12 +63,25 @@
 			<artifactId>modelmapper</artifactId>
 			<version>3.2.1</version>
 		</dependency>
-
+		<!-- H2 para tests :p-->
+		<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
 		<!-- Gson -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 		</dependency>
+		
+		<!-- Model mapper-->
+		
+		<dependency>
+    <groupId>org.modelmapper</groupId>
+    <artifactId>modelmapper</artifactId>
+    <version>3.2.0</version>
+</dependency>
 
 		<!-- AES Util (commons-codec) -->
 		<dependency>

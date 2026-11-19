@@ -1,52 +1,30 @@
 <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
   <div class="container">
-
     <a class="navbar-brand d-flex align-items-center" routerLink="/">
       <img src="assets/logo.jpg" alt="Conclave" class="logo me-2">
       <span class="brand-text">Conclave</span>
     </a>
 
-    <button class="navbar-toggler" type="button"
-            data-bs-toggle="collapse" data-bs-target="#menuPrincipal"
-            aria-controls="menuPrincipal" aria-expanded="false" aria-label="Menú">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal" aria-controls="menuPrincipal" aria-expanded="false" aria-label="Menú">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="menuPrincipal">
       <ul class="navbar-nav ms-auto align-items-lg-center">
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/" routerLinkActive="active"
-             [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/modelo" routerLinkActive="active">Modelos</a>
-        </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/video" routerLinkActive="active">Creacion Videos
-          </a>
-        </li>
-
-        <li class="nav-item">
-        <a class="nav-link" routerLink="/imagen" routerLinkActive="active">Creacion de Imagenes</a>
-      </li>
-
-        <li class="nav-item">
-          <a class="nav-link" routerLink="/sonido" routerLinkActive="active">Creacion de Sonidos </a>
-        </li>
-
-        <li class="nav-item ms-lg-3 mt-2 mt-lg-0">
-          <a class="btn btn-login px-4" routerLink="/login">Iniciar sesión</a>
-        </li>
-
-        <li class="nav-item ms-lg-2 mt-2 mt-lg-0">
-          <a class="btn btn-registro px-4" routerLink="/registro">Registrarse</a>
-        </li>
-
+        <li class="nav-item"><a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/modelo" routerLinkActive="active">Modelos</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/video" routerLinkActive="active">Creacion Videos</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/imagen" routerLinkActive="active">Creacion de Imagenes</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/sonido" routerLinkActive="active">Creacion de Sonidos</a></li>
+        <ng-container *ngIf="auth.username$ | async as username; else guestLinks">
+          <li class="nav-item ms-lg-3 mt-2 mt-lg-0"><a class="nav-link user-label" routerLink="/perfil">Hola, {{ username }} · Mi perfil</a></li>
+          <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><button class="btn btn-login px-4" type="button" (click)="logout()">Cerrar sesión</button></li>
+        </ng-container>
+        <ng-template #guestLinks>
+          <li class="nav-item ms-lg-3 mt-2 mt-lg-0"><a class="btn btn-login px-4" routerLink="/login">Iniciar sesión</a></li>
+          <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><a class="btn btn-registro px-4" routerLink="/registro">Registrarse</a></li>
+        </ng-template>
       </ul>
     </div>
-
   </div>
 </nav>

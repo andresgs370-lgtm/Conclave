@@ -28,17 +28,17 @@ import java.util.List;
 
 /**
  * Controlador REST para la generación de contenido multimedia mediante
- * OpenRouter.
+ * proveedores gratuitos.
  *
  * <p>
  * Expone el endpoint {@code POST /prompt/generar} que recibe el prompt del
  * usuario y el tipo de salida deseado, lanza en paralelo las peticiones a los
- * presets de OpenRouter y devuelve la lista de respuestas de cada modelo.
+ * presets de los proveedores configurados y devuelve la lista de respuestas de cada modelo.
  * </p>
  *
  * <p>
  * Este controlador <strong>no</strong> interactúa con la base de datos. Los
- * resultados viajan directamente desde OpenRouter al frontend.
+ * resultados viajan directamente desde los proveedores configurados al frontend.
  * </p>
  *
  * <p>
@@ -48,11 +48,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/prompt")
 @CrossOrigin(origins = { "http://localhost:8080", "http://localhost:8081", "http://localhost:4200" })
-@Tag(name = "Generación de contenido", description = "Envía un prompt a OpenRouter y retorna las respuestas de los modelos en paralelo")
+@Tag(name = "Generación de contenido", description = "Genera contenido multimedia con proveedores configurados")
 @SecurityRequirement(name = "bearerAuth")
 public class PromptController {
 
-	/** Servicio que orquesta las llamadas asíncronas a OpenRouter. */
+	/** Servicio que orquesta las llamadas asíncronas a los proveedores configurados. */
 	@Autowired
 	private PromptService promptService;
 
@@ -61,7 +61,7 @@ public class PromptController {
 	}
 
 	/**
-	 * Recibe el prompt del usuario, selecciona los presets de OpenRouter según el
+	 * Recibe el prompt del usuario, selecciona los presets de los proveedores configurados según el
 	 * tipo de salida y retorna las respuestas de todos los modelos en paralelo.
 	 *
 	 * <p>
@@ -79,13 +79,13 @@ public class PromptController {
 	 *         tipo de salida no tiene presets asignados, o {@code 500} si ocurre un
 	 *         error inesperado
 	 */
-	@Operation(summary = "Generar contenido multimedia con OpenRouter", description = """
-			Envía el prompt a los presets de OpenRouter según el tipo de salida elegido
+	@Operation(summary = "Generar contenido multimedia con los proveedores configurados", description = """
+			Envía el prompt a los presets de los proveedores configurados según el tipo de salida elegido
 			y retorna la respuesta de cada modelo.
 
-			- `IMAGE` dispara 4 modelos en paralelo.
-			- `AUDIO` dispara 2 modelos en paralelo.
-			- `VIDEO` dispara 1 modelo.
+			- `IMAGE` usa Cloudflare Workers AI (FLUX.1 schnell).
+			- `AUDIO` usa Gemini Text-to-Speech.
+			- `VIDEO` genera clips de video con Agnes AI (`agnes-video-2.5-flash`) a partir del prompt. Requiere una API key activa de Agnes AI configurada en Swagger.
 
 			Cada elemento de la lista de respuesta identifica el modelo que lo generó
 			y el contenido (URL o base64) listo para mostrar o descargar.
@@ -95,9 +95,9 @@ public class PromptController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Respuestas de los modelos generadas exitosamente", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AIResponseDTO.class))),
 			@ApiResponse(responseCode = "400", description = "Tipo de salida no soportado", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(value = "{\"status\":400,\"error\":\"Solicitud inválida\","
-					+ "\"message\":\"El proveedor OpenRouter no soporta el tipo de salida: TEXT\"}"))),
-			@ApiResponse(responseCode = "503", description = "API key de OpenRouter no configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(value = "{\"status\":503,\"error\":\"Servicio no disponible\","
-					+ "\"message\":\"La API key del proveedor OpenRouter no está configurada.\"}"))),
+					+ "\"message\":\"El proveedor los proveedores configurados no soporta el tipo de salida: TEXT\"}"))),
+			@ApiResponse(responseCode = "503", description = "API key de los proveedores configurados no configurada", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(value = "{\"status\":503,\"error\":\"Servicio no disponible\","
+					+ "\"message\":\"La API key del proveedor los proveedores configurados no está configurada.\"}"))),
 			@ApiResponse(responseCode = "500", description = "Error interno del servidor", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, examples = @ExampleObject(value = "{\"status\":500,\"error\":\"Error interno del servidor\","
 					+ "\"message\":\"Error inesperado al procesar la solicitud\"}"))) })
 	@PostMapping(path = "/generar", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

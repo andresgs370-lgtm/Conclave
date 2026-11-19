@@ -67,14 +67,13 @@ public class LoadDatabase {
 				log.info("Precargando usuario normal");
 			}
 			
-			Optional<ApiKey> foundKey = apiKeyRepo.findByProvider(AIProvider.OPENROUTER);
-			if (foundKey.isPresent()) {
-				log.info("API key de OpenRouter ya existe, omitiendo...");
-			} else {
-				ApiKey apiKey = new ApiKey(AIProvider.OPENROUTER);
-				apiKeyRepo.save(apiKey);
-				log.info("Creando registro vacío de API key para OpenRouter");
-			}
+            for (AIProvider provider : AIProvider.values()) {
+                if (apiKeyRepo.findByProvider(provider).isEmpty()) {
+                    apiKeyRepo.save(new ApiKey(provider));
+                    log.info("Creando registro vacío de API key para {}", provider.getDisplayName());
+                }
+            }
+
 		};
 	}
 

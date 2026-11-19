@@ -86,7 +86,7 @@ public class ApiKeyController {
 	@Operation(
 			summary = "Actualizar API key de un proveedor",
 			description = """
-					Actualiza la clave y/o el estado activo del proveedor indicado.
+					Actualiza la clave y/o el estado activo del proveedor indicado. Para CLOUDFLARE, `newKey` debe contener `ACCOUNT_ID|API_TOKEN`. Para AGNES_AI, `newKey` debe ser el token de Agnes AI. Para FAL_AI, KINOVI_AI y REPLICATE, `newKey` es el token de cada servicio.
 
 					- Si `newKey` está presente, se cifra con AES antes de persistirla.
 					- Si `active` está presente, se cambia el estado de la clave.
@@ -105,13 +105,13 @@ public class ApiKeyController {
 	@PutMapping(path = "/update/{provider}", consumes = MediaType.APPLICATION_JSON_VALUE)
 	ResponseEntity<String> update(
 			@Parameter(description = "Proveedor de IA", required = true,
-					example = "OPENAI")
+					example = "CLOUDFLARE")
 			@PathVariable AIProvider provider,
 			@Parameter(description = "Nueva clave y/o estado",
 					required = true,
 					schema = @Schema(implementation = ApiKeyUpdateDTO.class),
 					examples = @ExampleObject(
-							value = "{\"newKey\":\"sk-nuevaClave\",\"active\":true}"))
+							value = "{\"newKey\":\"ACCOUNT_ID|CLOUDFLARE_API_TOKEN\",\"active\":true}"))
 			@RequestBody ApiKeyUpdateDTO data,
 			Authentication auth) {
 
@@ -148,7 +148,7 @@ public class ApiKeyController {
 	@PutMapping("/setenabled/{provider}")
 	ResponseEntity<String> setActive(
 			@Parameter(description = "Proveedor de IA", required = true,
-					example = "OPENAI")
+					example = "AGNES_AI")
 			@PathVariable AIProvider provider,
 			@Parameter(description = "true = activar, false = desactivar",
 					required = true, example = "true")

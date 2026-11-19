@@ -27,6 +27,13 @@ public class PromptRequestDTO {
 
 	/** Modelo de OpenRouter a usar (p.ej. {@code "openai/gpt-4o"}, {@code "anthropic/claude-3.5-sonnet"}). */
 	private String model;
+
+	/** Proveedor de generación de imágenes seleccionado por el usuario. */
+	private String imageProvider;
+	/** Proveedor/modelo de generación de vídeo. */
+	private String videoProvider;
+	/** Identificador opcional del modelo para proveedores configurables. */
+	private String videoModel;
 	
 	/** Constructor por defecto. */
 	public PromptRequestDTO() {
@@ -76,13 +83,20 @@ public class PromptRequestDTO {
 		return model;
 	}
 
+	public String getImageProvider() { return imageProvider; }
+	public String getVideoProvider() { return videoProvider; }
+	public void setVideoProvider(String videoProvider) { this.videoProvider = videoProvider; }
+	public String getVideoModel() { return videoModel; }
+	public void setVideoModel(String videoModel) { this.videoModel = videoModel; }
+	public void setImageProvider(String imageProvider) { this.imageProvider = imageProvider; }
+
 	public void setModel(String model) {
 		this.model = model;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(format, model, outputType, promptText);
+		return Objects.hash(format, model, outputType, promptText, imageProvider, videoProvider, videoModel);
 	}
 
 	@Override
@@ -95,13 +109,13 @@ public class PromptRequestDTO {
 			return false;
 		PromptRequestDTO other = (PromptRequestDTO) obj;
 		return format == other.format && Objects.equals(model, other.model) && outputType == other.outputType
-				&& Objects.equals(promptText, other.promptText);
+				&& Objects.equals(promptText, other.promptText) && Objects.equals(imageProvider, other.imageProvider) && Objects.equals(videoProvider, other.videoProvider) && Objects.equals(videoModel, other.videoModel);
 	}
 
 	@Override
 	public String toString() {
 		return "PromptRequestDTO [promptText=" + promptText + ", outputType=" + outputType + ", format=" + format
-				+ ", model=" + model + "]";
+				+ ", model=" + model + ", imageProvider=" + imageProvider + ", videoProvider=" + videoProvider + ", videoModel=" + videoModel + "]";
 	}
 	
 	
