@@ -1,5 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { HttpClientModule } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 import { App } from './app';
@@ -13,6 +15,7 @@ import { Registrocomponent } from './component/registrocomponent/registrocompone
 import { Videocomponent } from './component/videocomponent/videocomponent';
 import { Imagencomponent } from './component/imagencomponent/imagencomponent';
 import { Sonidocomponent } from './component/sonidocomponent/sonidocomponent';
+import { Perfilcomponent } from './component/perfilcomponent/perfilcomponent';
 /**
  * Módulo raíz de la aplicación Conclave.
  */
@@ -28,8 +31,9 @@ import { Sonidocomponent } from './component/sonidocomponent/sonidocomponent';
     Videocomponent,
     Imagencomponent,
     Sonidocomponent,
+    Perfilcomponent,
   ],
-  imports: [BrowserModule, RouterModule.forRoot(routes)],
+  imports: [BrowserModule, HttpClientModule, FormsModule, RouterModule.forRoot(routes)],
   bootstrap: [App],
 })
 export class AppModule {} // skipcq: JS-0327

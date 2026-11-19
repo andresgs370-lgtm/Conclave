@@ -1,5 +1,6 @@
 <section class="image-page">
   <div class="container">
+    <div class="alert alert-warning" *ngIf="loginRequired">Inicia sesión para utilizar la generación de contenido. <a routerLink="/login">Iniciar sesión</a></div>
 
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
@@ -17,32 +18,14 @@
             <textarea
               id="prompt"
               class="form-control"
+              name="prompt"
+              [(ngModel)]="prompt"
               rows="5"
               placeholder="Un gato astronauta flotando en una galaxia de colores, estilo ilustración digital..."></textarea>
             <div class="hint">Mientras más detalles des, mejor será el resultado.</div>
           </div>
 
-          <div class="mb-4">
-            <span class="form-label d-block">Modelo</span>
-            <div class="row g-2">
-              <div class="col-6">
-                <input type="radio" class="btn-check" name="modelo" id="model-midjourney" checked>
-                <label class="model-option" for="model-midjourney">
-                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/midjourney.png" alt="Midjourney">
-                  <strong>Midjourney</strong>
-                  <small>Arte de alta calidad</small>
-                </label>
-              </div>
-              <div class="col-6">
-                <input type="radio" class="btn-check" name="modelo" id="model-dalle">
-                <label class="model-option" for="model-dalle">
-                  <img src="https://cdn.jsdelivr.net/npm/@lobehub/icons-static-png@latest/dark/dalle-color.png" alt="DALL·E">
-                  <strong>DALL·E</strong>
-                  <small>Imágenes desde texto</small>
-                </label>
-              </div>
-            </div>
-          </div>
+
 
           <div class="mb-4">
             <span class="form-label d-block">Cantidad</span>
@@ -82,7 +65,9 @@
             <span class="ai-no">✖ Estos modelos no generan audio ni video.</span>
           </div>
 
-          <button type="button" class="btn btn-primary btn-lg w-100">🖼️ Generar imagen</button>
+          <div class="mb-4"><label class="form-label" for="output-format">Formato de salida</label><select id="output-format" class="form-select" [(ngModel)]="format"><option>PNG</option><option>JPEG</option><option>WEBP</option></select></div>
+          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' 🖼️ Generar imagen ' }}</button>
+          <p class="text-danger mt-3" *ngIf="error">{{ error }}</p>
         </div>
       </div>
 
@@ -101,50 +86,35 @@
                 <path d="M21 15l-5-5L5 21"/>
               </svg>
             </div>
-            <p class="player-text">Tu imagen aparecerá aquí</p>
+            <p class="player-text" *ngIf="!results.length">Tu imagen aparecerá aquí</p>
+            <div class="w-100" *ngIf="results.length">
+              <div class="result-card mb-3 p-3 rounded" *ngFor="let result of results">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h6 class="mb-0">{{ result.model || result.provider || 'Modelo' }}</h6>
+                  <span class="badge" [class.bg-success]="result.status === 'SUCCESS'" [class.bg-danger]="result.status !== 'SUCCESS'">{{ result.status || 'Respuesta' }}</span>
+                </div>
+                <p *ngIf="result.textContent" class="mb-2 text-break">{{ result.textContent }}</p>
+                <p *ngIf="result.errorMessage" class="text-danger mb-2">{{ result.errorMessage }}</p>
+                <div *ngIf="result.downloadUrl">
+                  <img *ngIf="result.mimeType?.startsWith('image/')" [src]="result.downloadUrl" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video *ngIf="result.mimeType?.startsWith('video/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></video>
+                  <audio *ngIf="result.mimeType?.startsWith('audio/')" [src]="result.downloadUrl" controls class="w-100 mb-2"></audio>
+                  <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
+                </div>
+                <small class="text-secondary" *ngIf="result.durationMs">Tiempo: {{ result.durationMs }} ms</small>
+              </div>
+            </div>
           </div>
 
           <div class="actions">
-            <button type="button" class="btn btn-outline-light" disabled>Ampliar</button>
-            <button type="button" class="btn btn-outline-light" disabled>Descargar</button>
-            <button type="button" class="btn btn-outline-light" disabled>Compartir</button>
+            <button type="button" class="btn btn-outline-light" (click)="prompt = ''; results = []; error = ''">Nueva generación</button>
+            <button type="button" class="btn btn-outline-light" (click)="downloadAll()" [disabled]="!results.length">Descargar resultados</button>
+            <button type="button" class="btn btn-outline-light" (click)="sharePrompt()" [disabled]="!prompt">Compartir prompt</button>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="recent">
-      <h4 class="recent-title">Tus imágenes recientes</h4>
-      <div class="row g-4">
-        <div class="col-md-6 col-lg-4">
-          <div class="recent-card">
-            <div class="thumb thumb-1"></div>
-            <div class="recent-info">
-              <strong>Atardecer en el mar</strong>
-              <small>Midjourney · 1:1 · Realista</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 col-lg-4">
-          <div class="recent-card">
-            <div class="thumb thumb-2"></div>
-            <div class="recent-info">
-              <strong>Ciudad futurista</strong>
-              <small>DALL·E · 16:9 · Ilustración digital</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 col-lg-4">
-          <div class="recent-card">
-            <div class="thumb thumb-3"></div>
-            <div class="recent-info">
-              <strong>Bosque con niebla</strong>
-              <small>Midjourney · 9:16 · Óleo</small>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
   </div>
 </section>

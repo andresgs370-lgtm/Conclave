@@ -1,11 +1,18 @@
 import { Component } from '@angular/core';
-/**
- * Componente visual y de navegacion para todo el aplicativo y de navegacion.
- */
+import { Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+
 @Component({
   selector: 'app-navbarcomponent',
   standalone: false,
   styleUrl: './navbarcomponent.css',
   templateUrl: './navbarcomponent.html',
 })
-export class Navbarcomponent {}// skipcq: JS-0327
+export class Navbarcomponent {
+  constructor(public auth: AuthService, private router: Router) {}
+
+  logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/']);
+  }
+}

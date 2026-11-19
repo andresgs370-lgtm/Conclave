@@ -31,8 +31,7 @@ public class UserService implements CRUDOperation<UserDTO> {
 	private UserRepository userRepo;
 
 	/** Mapeador para convertir entre entidades {@link User} y DTOs {@link UserDTO}. */
-	@Autowired
-	private ModelMapper modelMapper;
+	private ModelMapper modelMapper = new ModelMapper();
 
 	/** Codificador para encriptar contraseñas de usuarios. */
 	@Autowired
@@ -94,14 +93,13 @@ public class UserService implements CRUDOperation<UserDTO> {
 			return 3;
 		}
 
-		User entity = modelMapper.map(data, User.class);
+		User entity = new User();
+		entity.setUsername(data.getUsername());
+		entity.setEmail(data.getEmail());
+		entity.setFullName(data.getFullName());
+		entity.setRole(User.Role.USER);
 		entity.setPassword(passwordEncoder.encode(data.getPassword()));
-
-		// Si el DTO no especifica rol, ModelMapper puede dejar null; usamos USER por defecto
-		if (entity.getRole() == null) {
-			entity.setRole(User.Role.USER);
-		}
-
+		entity.setEnabled(true);
 
 		userRepo.save(entity);
 		return 0;

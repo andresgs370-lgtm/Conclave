@@ -1,0 +1,5 @@
+.profile-page { min-height: 75vh; color: #f4f9f9; }
+.profile-panel { max-width: 760px; background: #141a3a; border: 1px solid rgba(255,255,255,.12); }
+.profile-row { display: flex; justify-content: space-between; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid rgba(255,255,255,.12); }
+.profile-row span { color: #a9b1c9; }
+@media (max-width: 576px) { .profile-row { flex-direction: column; gap: .25rem; } }

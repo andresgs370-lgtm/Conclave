@@ -1,0 +1,14 @@
+<section class="profile-page container py-5">
+  <div class="profile-panel mx-auto p-4 p-md-5 rounded-4">
+    <h1 class="mb-4">Mi perfil</h1>
+    <p *ngIf="loading">Cargando perfil...</p>
+    <p class="text-danger" *ngIf="error">{{ error }}</p>
+    <div *ngIf="profile">
+      <div class="profile-row"><span>Usuario</span><strong>{{ profile.username }}</strong></div>
+      <div class="profile-row"><span>Correo</span><strong>{{ profile.email || 'No disponible' }}</strong></div>
+      <div class="profile-row"><span>Nombre</span><strong>{{ profile.fullName || 'No disponible' }}</strong></div>
+      <div class="profile-row"><span>Rol</span><strong>{{ profile.role || 'USER' }}</strong></div>
+      <div class="profile-row"><span>Cuenta</span><strong>{{ profile.enabled ? 'Activa' : 'Desactivada' }}</strong></div>
+    </div>
+  </div>
+</section>
