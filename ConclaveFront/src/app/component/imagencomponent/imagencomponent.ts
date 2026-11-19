@@ -122,10 +122,13 @@ export class Imagencomponent {
   /** Extrae un mensaje de error de una respuesta del servidor. */
   private static messageFromPayload(payload: unknown): string | null {
     if (typeof payload === 'string') return payload;
-    if (payload && typeof payload === 'object' && 'message' in payload) {
-      const message = (payload as { message?: unknown }).message;
-      return typeof message === 'string' ? message : null;
-    }
-    return null;
+    const message = Imagencomponent.payloadMessage(payload);
+    return typeof message === 'string' ? message : null;
+  }
+
+  /** Obtiene la propiedad message cuando el cuerpo es un objeto. */
+  private static payloadMessage(payload: unknown): unknown {
+    if (!payload || typeof payload !== 'object' || !('message' in payload)) return null;
+    return (payload as { message?: unknown }).message;
   }
 }

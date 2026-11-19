@@ -116,10 +116,16 @@ export class Registrocomponent {
 
   /** Devuelve el mensaje del servidor para errores HTTP 400. */
   private static badRequestError(err: unknown, raw: unknown): string {
-    if (!err || typeof err !== 'object' || !('status' in err)) return '';
-    return (err as { status?: number }).status === 400
+    return Registrocomponent.httpStatus(err) === 400
       ? Registrocomponent.errorText(raw) || 'No se pudo crear la cuenta. Verifica los datos ingresados.'
       : '';
+  }
+
+  /** Obtiene el código HTTP de un error cuando está disponible. */
+  private static httpStatus(err: unknown): number | null {
+    if (!err || typeof err !== 'object' || !('status' in err)) return null;
+    const status = (err as { status?: unknown }).status;
+    return typeof status === 'number' ? status : null;
   }
 
   /** Convierte el cuerpo de error del backend a texto. */
