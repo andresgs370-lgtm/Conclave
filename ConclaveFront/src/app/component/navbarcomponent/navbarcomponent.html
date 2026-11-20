@@ -1,5 +1,5 @@
-<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-  <div class="container">
+<nav class="navbar navbar-expand-xxl navbar-dark sticky-top">
+  <div class="container-fluid px-3 px-xxl-4">
     <a class="navbar-brand d-flex align-items-center" routerLink="/">
       <img src="assets/logo.jpg" alt="Conclave" class="logo me-2">
       <span class="brand-text">Conclave</span>
@@ -10,19 +10,20 @@
     </button>
 
     <div class="collapse navbar-collapse" id="menuPrincipal">
-      <ul class="navbar-nav ms-auto align-items-lg-center">
+      <ul class="navbar-nav ms-auto align-items-xxl-center">
         <li class="nav-item"><a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Inicio</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/modelo" routerLinkActive="active">Modelos</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/video" routerLinkActive="active">Creacion Videos</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/imagen" routerLinkActive="active">Creacion de Imagenes</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/sonido" routerLinkActive="active">Creacion de Sonidos</a></li>
+        <li class="nav-item" *ngIf="auth.isAdmin$ | async"><a class="nav-link" routerLink="/administrar" routerLinkActive="active">Administrar</a></li>
         <ng-container *ngIf="auth.username$ | async as username; else guestLinks">
-          <li class="nav-item ms-lg-3 mt-2 mt-lg-0"><a class="nav-link user-label" routerLink="/perfil">Hola, {{ username }} · Mi perfil</a></li>
-          <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><button class="btn btn-login px-4" type="button" (click)="logout()">Cerrar sesión</button></li>
+          <li class="nav-item ms-xxl-3 mt-2 mt-xxl-0"><a class="nav-link user-label" routerLink="/perfil">Hola, {{ username }} · Mi perfil</a></li>
+          <li class="nav-item ms-xxl-2 mt-2 mt-xxl-0"><button class="btn btn-login px-4" type="button" (click)="logout()">Cerrar sesión</button></li>
         </ng-container>
         <ng-template #guestLinks>
-          <li class="nav-item ms-lg-3 mt-2 mt-lg-0"><a class="btn btn-login px-4" routerLink="/login">Iniciar sesión</a></li>
-          <li class="nav-item ms-lg-2 mt-2 mt-lg-0"><a class="btn btn-registro px-4" routerLink="/registro">Registrarse</a></li>
+          <li class="nav-item ms-xxl-3 mt-2 mt-xxl-0"><a class="btn btn-login px-4" routerLink="/login">Iniciar sesión</a></li>
+          <li class="nav-item ms-xxl-2 mt-2 mt-xxl-0"><a class="btn btn-registro px-4" routerLink="/registro">Registrarse</a></li>
         </ng-template>
       </ul>
     </div>

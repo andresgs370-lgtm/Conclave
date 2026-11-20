@@ -7,6 +7,7 @@ import { Videocomponent } from './component/videocomponent/videocomponent';
 import { Imagencomponent } from './component/imagencomponent/imagencomponent';
 import { Sonidocomponent } from './component/sonidocomponent/sonidocomponent';
 import { Perfilcomponent } from './component/perfilcomponent/perfilcomponent';
+import { Administrarcomponent} from './component/administrarcomponent/administrarcomponent';
 
 export const routes: Routes = [
   { path: '', component: Paginaprincipalcomponent },
@@ -17,4 +18,5 @@ export const routes: Routes = [
   {path : 'imagen', component:Imagencomponent},
   {path : 'sonido', component:Sonidocomponent},
   {path : 'perfil', component:Perfilcomponent},
+  {path : 'administrar', component:Administrarcomponent},
 ];
