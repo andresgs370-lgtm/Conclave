@@ -1,0 +1,134 @@
+<section class="admin-hero text-center">
+  <span class="eyebrow animate__animated animate__fadeInDown">Panel</span>
+  <h1 class="display-5 fw-bold animate__animated animate__fadeInDown animate__delay-1s">Administración</h1>
+  <p class="lead mx-auto animate__animated animate__fadeInUp animate__delay-1s">
+    Gestiona los usuarios, la API key y revisa la actividad de la plataforma.
+  </p>
+</section>
+
+<section class="container admin-body animate__animated animate__fadeIn animate__delay-1s">
+
+  <div class="admin-tabs" role="tablist">
+    <button type="button" role="tab" [class.active]="tab === 'usuarios'" (click)="cambiarTab('usuarios')">Usuarios</button>
+    <button type="button" role="tab" [class.active]="tab === 'apikey'" (click)="cambiarTab('apikey')">API key</button>
+    <button type="button" role="tab" [class.active]="tab === 'historial'" (click)="cambiarTab('historial')">Historial</button>
+  </div>
+
+  <div class="toast-msg" *ngIf="mensaje">{{ mensaje }}</div>
+
+  <div class="glass-card" *ngIf="tab === 'usuarios'">
+    <div class="card-tools">
+      <input class="form-control admin-input" type="search" placeholder="Buscar por usuario o correo"
+             [(ngModel)]="filtro" aria-label="Buscar usuarios">
+      <span class="count">{{ usuariosFiltrados.length }} de {{ usuarios.length }} usuarios</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table admin-table align-middle mb-0">
+        <thead>
+        <tr><th>Usuario</th><th>Rol</th><th>Estado</th><th class="text-end">Acciones</th></tr>
+        </thead>
+        <tbody>
+        <tr *ngFor="let u of usuariosFiltrados">
+          <td>
+            <div class="fw-semibold">{{ u.username }}</div>
+            <div class="sub">{{ u.email }}</div>
+          </td>
+          <td><span class="role" [class.role-admin]="u.role === 'ADMIN'">{{ u.role }}</span></td>
+          <td>
+              <span class="state" *ngIf="u.enabled !== undefined" [class.state-on]="u.enabled" [class.state-off]="!u.enabled">
+                {{ u.enabled ? 'Activo' : 'Suspendido' }}
+              </span>
+            <span class="sub" *ngIf="u.enabled === undefined">—</span>
+          </td>
+          <td class="text-end actions">
+            <button class="btn btn-outline-light btn-sm" (click)="abrirEditar(u)">Editar</button>
+            <button class="btn btn-outline-light btn-sm" (click)="cambiarEstado(u)">
+              {{ u.enabled === false ? 'Activar' : 'Suspender' }}
+            </button>
+            <button class="btn btn-outline-light btn-sm" (click)="verHistorial(u)">Historial</button>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="empty" *ngIf="usuariosFiltrados.length === 0">No hay usuarios que coincidan con la búsqueda.</div>
+  </div>
+
+  <div class="glass-card key-card" *ngIf="tab === 'apikey'">
+    <h5 class="mb-1">API key activa</h5>
+    <p class="sub mb-3">Al cambiarla, todo lo que use la clave anterior dejará de funcionar.</p>
+
+    <div class="key-row">
+      <input class="form-control admin-input mono" readonly [value]="keyVisible ? apiKey : keyEnmascarada" aria-label="API key">
+      <button class="btn btn-outline-light" (click)="keyVisible = !keyVisible">{{ keyVisible ? 'Ocultar' : 'Mostrar' }}</button>
+    </div>
+
+    <div class="key-actions">
+      <button class="btn btn-primary" (click)="abrirCambiarKey()">Cambiar API key</button>
+      <button class="btn btn-outline-danger" (click)="regenerarKey()">Generar nueva</button>
+    </div>
+    <div class="form-error" *ngIf="keyError">{{ keyError }}</div>
+  </div>
+
+  <div class="glass-card" *ngIf="tab === 'historial'">
+    <div class="card-tools">
+      <select class="form-select admin-input" [(ngModel)]="histUsuarioId" (change)="cargarHistorial()" aria-label="Filtrar por usuario">
+        <option [ngValue]="null">Todos los usuarios</option>
+        <option *ngFor="let u of usuarios" [ngValue]="u.id">{{ u.username }}</option>
+      </select>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table admin-table align-middle mb-0">
+        <thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
+        <tbody>
+        <tr *ngFor="let h of historial">
+          <td class="sub">{{ h.timestamp | date:'dd/MM/yyyy HH:mm' }}</td>
+          <td>{{ h.username }}</td>
+          <td>{{ h.action }}</td>
+          <td class="sub">{{ h.detail }}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="empty" *ngIf="historial.length === 0">{{ histMensaje }}</div>
+  </div>
+</section>
+
+<div class="overlay" *ngIf="editando" (click)="cerrarEditar()">
+  <form class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()" (ngSubmit)="guardarUsuario()">
+    <h5 class="mb-3">Editar usuario</h5>
+    <label class="field">Usuario
+      <input class="form-control admin-input" name="username" [(ngModel)]="form.username" required>
+    </label>
+    <label class="field">Correo
+      <input class="form-control admin-input" type="email" name="email" [(ngModel)]="form.email" required>
+    </label>
+    <label class="field">Rol
+      <select class="form-select admin-input" name="role" [(ngModel)]="form.role">
+        <option value="USER">USER</option>
+        <option value="ADMIN">ADMIN</option>
+      </select>
+    </label>
+    <div class="form-error" *ngIf="editError">{{ editError }}</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline-light" (click)="cerrarEditar()">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    </div>
+  </form>
+</div>
+
+<div class="overlay" *ngIf="cambiandoKey" (click)="cambiandoKey = false">
+  <form class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()" (ngSubmit)="guardarKey()">
+    <h5 class="mb-3">Cambiar API key</h5>
+    <label class="field">Nueva API key
+      <input class="form-control admin-input mono" name="nuevaKey" [(ngModel)]="nuevaKey" minlength="16" autocomplete="off" required>
+    </label>
+    <div class="sub mb-2">Mínimo 16 caracteres.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline-light" (click)="cambiandoKey = false">Cancelar</button>
+      <button type="submit" class="btn btn-primary">Guardar API key</button>
+    </div>
+  </form>
+</div>

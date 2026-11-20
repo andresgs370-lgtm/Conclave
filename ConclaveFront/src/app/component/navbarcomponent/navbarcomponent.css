@@ -7,8 +7,8 @@
 }
 
 .logo {
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   object-fit: cover;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.2);
@@ -22,7 +22,7 @@
 
 .brand-text {
   font-weight: 800;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   letter-spacing: 1px;
   background: linear-gradient(90deg, #0d6efd, #6f42c1, #d63384);
   -webkit-background-clip: text;
@@ -32,8 +32,11 @@
 
 .nav-link {
   position: relative;
-  margin: 0 0.4rem;
+  margin: 0 0.15rem;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.95rem;
   font-weight: 500;
+  white-space: nowrap;
   color: #ced4da;
   transition: color 0.2s ease;
 }
@@ -41,12 +44,15 @@
 .nav-link::after {
   content: '';
   position: absolute;
-  left: 0;
+  left: 0.7rem;
+  right: 0.7rem;
   bottom: 2px;
-  width: 0;
+  width: auto;
   height: 2px;
   background: linear-gradient(90deg, #0d6efd, #d63384);
-  transition: width 0.3s ease;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
 }
 
 .nav-link:hover,
@@ -56,7 +62,13 @@
 
 .nav-link:hover::after,
 .nav-link.active::after {
-  width: 100%;
+  transform: scaleX(1);
+}
+
+.btn-login,
+.btn-registro {
+  white-space: nowrap;
+  font-size: 0.95rem;
 }
 
 .btn-login {
@@ -99,7 +111,7 @@
   transform: translateY(0);
 }
 
-@media (max-width: 991px) {
+@media (max-width: 1399px) {
   .navbar-collapse {
     margin-top: 0.75rem;
     padding: 1rem 0;
@@ -117,4 +129,7 @@
   }
 }
 
-.user-label { color: #fff; font-weight: 600; }
+.user-label {
+  color: #fff;
+  font-weight: 600;
+}
