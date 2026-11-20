@@ -132,3 +132,14 @@
     </div>
   </form>
 </div>
+
+<div class="overlay" *ngIf="confirmandoRegenerar" (click)="confirmandoRegenerar = false">
+  <div class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()">
+    <h5 class="mb-3">Generar nueva API key</h5>
+    <p class="sub">Se generará una nueva API key y la anterior dejará de funcionar. ¿Continuar?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline-light" (click)="confirmandoRegenerar = false">Cancelar</button>
+      <button type="button" class="btn btn-outline-danger" (click)="confirmarRegenerar()">Generar</button>
+    </div>
+  </div>
+</div>

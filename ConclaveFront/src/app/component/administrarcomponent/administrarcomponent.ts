@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { AuthService } from '../../services/auth.service';
 
 /** Usuario tal como lo devuelve el backend (UserDTO). */
 interface User {
@@ -8,7 +9,6 @@ interface User {
   email: string;
   role: string;
   enabled?: boolean;
-  [k: string]: any;
 }
 
 /** Registro del historial de actividad de un usuario. */
@@ -34,9 +34,9 @@ export class Administrarcomponent implements OnInit {
   /** URL base del backend. */
   private api = 'http://localhost:8080';
 
-  /** Encabezados de autenticación con el token guardado en la sesión local. */
+  /** Encabezados de autenticación con el token de la sesión actual. */
   private get headers(): HttpHeaders {
-    const token = localStorage.getItem('conclave_token');
+    const token = this.auth.token;
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 
@@ -73,6 +73,9 @@ export class Administrarcomponent implements OnInit {
   /** Indica si el modal para cambiar la API key está abierto. */
   cambiandoKey = false;
 
+  /** Indica si el modal de confirmación para generar una nueva API key está abierto. */
+  confirmandoRegenerar = false;
+
   /** Valor escrito en el modal para la nueva API key. */
   nuevaKey = '';
 
@@ -85,8 +88,8 @@ export class Administrarcomponent implements OnInit {
   /** Mensaje mostrado cuando no hay registros o ocurre un error. */
   histMensaje = 'Sin actividad para mostrar.';
 
-  /** Inyecta el cliente HTTP. */
-  constructor(private http: HttpClient) {}
+  /** Inyecta el cliente HTTP y el servicio de sesión. */
+  constructor(private http: HttpClient, private auth: AuthService) {}
 
   /** Carga la lista de usuarios al iniciar el componente. */
   ngOnInit(): void { this.cargarUsuarios(); }
@@ -106,15 +109,17 @@ export class Administrarcomponent implements OnInit {
 
   /** Usuarios cuyo nombre o correo coincide con el texto del buscador. */
   get usuariosFiltrados(): User[] {
-    const q = this.filtro.trim().toLowerCase();
-    return this.usuarios.filter(u => (u.username + ' ' + u.email).toLowerCase().includes(q));
+    const texto = this.filtro.trim().toLowerCase();
+    return this.usuarios.filter(usuario =>
+      `${usuario.username} ${usuario.email}`.toLowerCase().includes(texto)
+    );
   }
 
   /** Carga todos los usuarios con `GET /user/getall`. El código 204 sin cuerpo se trata como lista vacía. */
   cargarUsuarios(): void {
     this.http.get<User[]>(`${this.api}/user/getall`, { observe: 'response', headers: this.headers }).subscribe({
       next: r => (this.usuarios = r.body ?? []),
-      error: e => this.avisar('No se pudieron cargar los usuarios (error ' + e.status + ')')
+      error: e => this.avisar(`No se pudieron cargar los usuarios (error ${e.status})`)
     });
   }
 
@@ -195,9 +200,12 @@ export class Administrarcomponent implements OnInit {
     });
   }
 
-  /** Genera una API key nueva con `POST /apikey/regenerate`, previa confirmación del administrador. */
-  regenerarKey(): void {
-    if (!confirm('Se generará una nueva API key y la anterior dejará de funcionar. ¿Continuar?')) return;
+  /** Abre el modal de confirmación antes de generar una nueva API key. */
+  regenerarKey(): void { this.confirmandoRegenerar = true; }
+
+  /** Genera una API key nueva con `POST /apikey/regenerate` tras la confirmación del administrador. */
+  confirmarRegenerar(): void {
+    this.confirmandoRegenerar = false;
     this.http.post(`${this.api}/apikey/regenerate`, null, { headers: this.headers }).subscribe({
       next: () => { this.keyVisible = true; this.avisar('Nueva API key generada'); this.cargarKey(); },
       error: () => (this.keyError = 'No se pudo generar la API key.')

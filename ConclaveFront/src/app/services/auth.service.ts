@@ -36,13 +36,18 @@ export class AuthService {
     this.roleSubject.next(null);
   }
 
-  /** Indica si hay token en la sesión local. */
-  get isLoggedIn(): boolean {
-    return Boolean(localStorage.getItem(this.tokenStorageKey));
+  /** Token de la sesión local, o `null` si no hay sesión. */
+  get token(): string | null {
+    return localStorage.getItem(this.tokenStorageKey);
   }
 
-  /** Indica si el rol guardado en la sesión local es ADMIN. */
+  /** Indica si hay token en la sesión local. */
+  get isLoggedIn(): boolean {
+    return Boolean(this.token);
+  }
+
+  /** Indica si el rol de la sesión actual es ADMIN. */
   get isAdmin(): boolean {
-    return (localStorage.getItem('conclave_role') ?? '').toUpperCase().includes('ADMIN');
+    return (this.roleSubject.value ?? '').toUpperCase().includes('ADMIN');
   }
 }
