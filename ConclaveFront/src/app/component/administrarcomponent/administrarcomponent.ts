@@ -196,20 +196,22 @@ export class Administrarcomponent implements OnInit {
     this.cambiarTab('historial');
   }
 
+  /** Nombres visibles de los proveedores de IA. */
+  private readonly nombresProveedores: Record<string, string> = {
+    OPENROUTER: 'OpenRouter',
+    GEMINI: 'Google Gemini',
+    CLOUDFLARE: 'Cloudflare Workers AI',
+    JSON2VIDEO: 'JSON2Video',
+    AGNES_AI: 'Agnes AI',
+    FAL_AI: 'fal.ai',
+    KINOVI_AI: 'Kinovi AI',
+    REPLICATE: 'Replicate',
+    HUGGINGFACE: 'Hugging Face'
+  };
+
   /** Nombre visible de cada proveedor de IA. */
   nombreProveedor(provider: string): string {
-    const nombres: Record<string, string> = {
-      OPENROUTER: 'OpenRouter',
-      GEMINI: 'Google Gemini',
-      CLOUDFLARE: 'Cloudflare Workers AI',
-      JSON2VIDEO: 'JSON2Video',
-      AGNES_AI: 'Agnes AI',
-      FAL_AI: 'fal.ai',
-      KINOVI_AI: 'Kinovi AI',
-      REPLICATE: 'Replicate',
-      HUGGINGFACE: 'Hugging Face'
-    };
-    return nombres[provider] ?? provider;
+    return this.nombresProveedores[provider] ?? provider;
   }
 
   /** Consulta las API keys registradas con `GET /admin/apikey/getall`. */
