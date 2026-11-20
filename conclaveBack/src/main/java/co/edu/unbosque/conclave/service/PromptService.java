@@ -66,22 +66,182 @@ public class PromptService {
     }
 
     /**
-     * Selecciona el proveedor de imágenes y valida su identificador.
+     * Selecciona el proveedor de imagenes y valida su identificador.
      *
-     * @param request parámetros de generación
-     * @return respuesta de generación de imagen
+     * <p>Proveedores soportados:</p>
+     * <ul>
+     *   <li>{@code GEMINI} — Google Gemini imagen.</li>
+     *   <li>{@code OPENROUTER} — 4 presets en paralelo via OpenRouter.</li>
+     *   <li>{@code CLOUDFLARE} — Cloudflare Workers AI (valor por defecto).</li>
+     * </ul>
+     *
+     * @param request parametros de generacion
+     * @return respuesta de generacion de imagen
      */
     private AIResponseDTO generateImage(PromptRequestDTO request) {
         String provider = request.getImageProvider();
         if (provider != null && "GEMINI".equalsIgnoreCase(provider.trim())) {
             return generateGeminiImage(request);
         }
+        if (provider != null && "OPENROUTER".equalsIgnoreCase(provider.trim())) {
+            return generateOpenRouterImages(request);
+        }
         if (provider != null && !provider.isBlank()
                 && !"CLOUDFLARE".equalsIgnoreCase(provider.trim())) {
             return failed(base(AIProvider.CLOUDFLARE, "image-provider", 400,
-                    System.currentTimeMillis()), "Proveedor de imagen no válido: " + provider);
+                    System.currentTimeMillis()), "Proveedor de imagen no valido: " + provider);
         }
         return generateCloudflareImage(request);
+    }
+
+    /**
+     * Genera imagenes lanzando en paralelo los 4 presets de OpenRouter.
+     *
+     * <p>Cada preset corre en un {@link CompletableFuture} independiente.
+     * Si un preset falla, su {@link AIResponseDTO} lleva
+     * {@link ResponseStatus#FAILED} sin afectar los demas.</p>
+     *
+     * <p>Los presets usados son:</p>
+     * <ul>
+     *   <li>{@code @preset/conclave-imagen-gpt}</li>
+     *   <li>{@code @preset/conclave-imagen-gemini}</li>
+     *   <li>{@code @preset/conclave-imagen-flux}</li>
+     *   <li>{@code @preset/conclave-imagen-seedream}</li>
+     * </ul>
+     *
+     * @param request parametros de generacion
+     * @return primer resultado exitoso, o el primero fallido si todos fallan
+     */
+    private AIResponseDTO generateOpenRouterImages(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String apiKey;
+        try {
+            apiKey = key(AIProvider.OPENROUTER);
+        } catch (Exception e) {
+            return failed(base(AIProvider.OPENROUTER, "openrouter-image", 400, start),
+                    "Configura la API Key de OpenRouter en Swagger: /admin/apikey/update/OPENROUTER.");
+        }
+
+        List<String> presets = List.of(
+                "@preset/conclave-imagen-gpt",
+                "@preset/conclave-imagen-gemini",
+                "@preset/conclave-imagen-flux",
+                "@preset/conclave-imagen-seedream"
+        );
+
+        Map<String, String> headers = Map.of(
+                "Authorization", "Bearer " + apiKey,
+                "Content-Type", "application/json",
+                "HTTP-Referer", "https://conclave.unbosque.edu.co",
+                "X-Title", "Conclave"
+        );
+
+        List<CompletableFuture<AIResponseDTO>> futuros = new ArrayList<>();
+        for (String preset : presets) {
+            String finalApiKey = apiKey;
+            CompletableFuture<AIResponseDTO> futuro = externalHandler
+                    .doPostAsync(openRouterUrl(), headers, construirBodyOpenRouter(preset, request))
+                    .thenApply(response -> parsearRespuestaOpenRouter(response, preset, start))
+                    .exceptionally(ex -> {
+                        LOGGER.log(Level.WARNING,
+                                "Error en preset OpenRouter {0}: {1}",
+                                new Object[]{preset, ex.getMessage()});
+                        return failed(base(AIProvider.OPENROUTER, preset, 500, start),
+                                ex.getMessage());
+                    });
+            futuros.add(futuro);
+        }
+
+        return futuros.stream()
+                .map(CompletableFuture::join)
+                .filter(dto -> ResponseStatus.SUCCESS.equals(dto.getStatus()))
+                .findFirst()
+                .orElseGet(() -> futuros.get(0).join());
+    }
+
+    /**
+     * Construye el JSON del body para una peticion a OpenRouter.
+     *
+     * @param presetId ID del preset de OpenRouter
+     * @param request  request del usuario
+     * @return cadena JSON lista para enviar
+     */
+    private String construirBodyOpenRouter(String presetId, PromptRequestDTO request) {
+        String contenido = request.getPromptText();
+        if (request.getFormat() != null) {
+            contenido += " Formato de salida: " + request.getFormat().getExtension();
+        }
+
+        JsonObject mensaje = new JsonObject();
+        mensaje.addProperty("role", "user");
+        mensaje.addProperty("content", contenido);
+
+        JsonArray mensajes = new JsonArray();
+        mensajes.add(mensaje);
+
+        JsonObject body = new JsonObject();
+        body.addProperty("model", presetId);
+        body.add("messages", mensajes);
+
+        return body.toString();
+    }
+
+    /**
+     * Parsea la respuesta de OpenRouter y la convierte en un {@link AIResponseDTO}.
+     *
+     * <p>Lee {@code choices[0].message.content} como resultado. Si la respuesta
+     * no es 2xx o el campo no existe, retorna un DTO con
+     * {@link ResponseStatus#FAILED}.</p>
+     *
+     * @param response respuesta HTTP de OpenRouter
+     * @param presetId ID del preset que genero la respuesta
+     * @param inicio   marca de tiempo antes de lanzar la peticion
+     * @return DTO con la respuesta normalizada
+     */
+    private AIResponseDTO parsearRespuestaOpenRouter(
+            HttpResponse<String> response, String presetId, long inicio) {
+
+        AIResponseDTO dto = base(AIProvider.OPENROUTER, presetId, response.statusCode(), inicio);
+
+        if (!ok(response)) {
+            return failed(dto, "OpenRouter respondio con HTTP "
+                    + response.statusCode() + " para " + presetId);
+        }
+
+        try {
+            JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
+            JsonArray choices = json.getAsJsonArray("choices");
+
+            if (choices == null || choices.isEmpty()) {
+                return failed(dto, "OpenRouter no devolvio choices para " + presetId);
+            }
+
+            JsonObject message = choices.get(0).getAsJsonObject().getAsJsonObject("message");
+            String content = message.has("content") && !message.get("content").isJsonNull()
+                    ? message.get("content").getAsString()
+                    : "";
+
+            dto.setDownloadUrl(content);
+            dto.setFormat(response.request() != null ? MediaFormat.PNG : MediaFormat.PNG);
+            dto.setMimeType("image/png");
+            dto.setStatus(ResponseStatus.SUCCESS);
+            return dto;
+
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING,
+                    "Error al parsear respuesta OpenRouter {0}: {1}",
+                    new Object[]{presetId, ex.getMessage()});
+            return failed(dto, "Error al parsear respuesta de " + presetId + ": " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Retorna la URL del endpoint de OpenRouter desde application.properties.
+     *
+     * @return URL del endpoint de chat completions de OpenRouter
+     */
+    private String openRouterUrl() {
+        return "https://openrouter.ai/api/v1/chat/completions";
     }
 
     /**
