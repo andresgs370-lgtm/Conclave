@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -268,7 +270,7 @@ public class PromptService {
         if ("KINOVI_AI".equalsIgnoreCase(provider)) return generateKinoviVideo(request);
         if ("FAL_AI".equalsIgnoreCase(provider)) return generateFalVideo(request);
         if ("REPLICATE".equalsIgnoreCase(provider)) return generateReplicateVideo(request);
-        if ("HUGGINGFACE".equalsIgnoreCase(provider)) return failed(base(AIProvider.HUGGINGFACE, request.getVideoModel(), 501, System.currentTimeMillis()), "Hugging Face Spaces no tiene un endpoint de video universal. Debes configurar el Space/API específico; esta opción aún no está implementada como adaptador genérico.");
+        if ("HUGGINGFACE".equalsIgnoreCase(provider)) return generateHuggingFaceVideo(request);
         return failed(base(AIProvider.AGNES_AI, "video-provider", 400, System.currentTimeMillis()), "Proveedor de video no válido: " + provider);
     }
 
@@ -543,6 +545,114 @@ public class PromptService {
 
         Thread.sleep(POLL_MS);
         return pollReplicate(url, model, apiKey, dto, start, deadline);
+    }
+
+    /**
+     * Genera un video mediante un Space de Hugging Face basado en Gradio.
+     * Envía la tarea al endpoint {@code /generate} del Space y espera su resultado.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la URL del video generado o el detalle del error
+     */
+    private AIResponseDTO generateHuggingFaceVideo(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String space = modelOr(request.getVideoModel(), "hugging-apps/minimax-h3-flashgen-4step");
+        String token;
+        try {
+            token = key(AIProvider.HUGGINGFACE);
+        } catch (Exception e) {
+            return failed(base(AIProvider.HUGGINGFACE, space, 400, start),
+                    "Configura HUGGINGFACE en Swagger (/admin/apikey/update/HUGGINGFACE).");
+        }
+        try {
+            String host = "https://" + space.toLowerCase().replace("/", "-").replace("_", "-").replace(".", "-") + ".hf.space";
+            String endpoint = host + "/gradio_api/call/generate";
+
+            JsonArray data = new JsonArray();
+            data.add(request.getPromptText());
+            data.add(JsonNull.INSTANCE);
+            data.add(JsonNull.INSTANCE);
+            data.add("960x544 \u00B7 16:9 fast");
+            data.add(5);
+            data.add(42);
+            data.add(false);
+            JsonObject body = new JsonObject();
+            body.add("data", data);
+
+            Map<String, String> headers = Map.of(
+                    "Authorization", "Bearer " + token,
+                    "Content-Type", "application/json");
+
+            HttpResponse<String> submit = post(endpoint, headers, body.toString());
+            AIResponseDTO dto = base(AIProvider.HUGGINGFACE, space, submit.statusCode(), start);
+            if (!ok(submit)) {
+                LOGGER.warning("Hugging Face submit falló: HTTP " + submit.statusCode() + " " + submit.body());
+                return failed(dto, "Hugging Face: " + error(submit));
+            }
+            String eventId = stringValue(JsonParser.parseString(submit.body()).getAsJsonObject(), "event_id");
+            if (eventId == null) return failed(dto, "Hugging Face no devolvió event_id: " + submit.body());
+
+            HttpResponse<String> result = get(endpoint + "/" + enc(eventId), Map.of("Authorization", "Bearer " + token));
+            if (!ok(result)) return failed(dto, "Hugging Face resultado: " + error(result));
+            return parseGradioStream(result.body(), dto, start);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Hugging Face video generation failed", e);
+            return failed(base(AIProvider.HUGGINGFACE, space, 500, start), "Error Hugging Face: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Interpreta la respuesta en formato de eventos de Gradio y extrae la URL del video.
+     *
+     * @param stream cuerpo de la respuesta del Space
+     * @param dto respuesta que se actualizará con el resultado
+     * @param start instante en que inició la generación
+     * @return respuesta con el video generado o con el detalle del fallo
+     */
+    private AIResponseDTO parseGradioStream(String stream, AIResponseDTO dto, long start) {
+        String event = null;
+        for (String line : stream.split("\\r?\\n")) {
+            if (line.startsWith("event:")) {
+                event = line.substring(6).trim();
+            } else if (line.startsWith("data:")) {
+                String payload = line.substring(5).trim();
+                if ("error".equals(event)) {
+                    LOGGER.warning("Hugging Face Space devolvió error: " + payload);
+                    return failed(dto, "El Space falló (puede estar saturado o sin cuota de GPU): " + payload);
+                }
+                if ("complete".equals(event)) {
+                    String url = findUrl(JsonParser.parseString(payload));
+                    if (url == null) return failed(dto, "El Space terminó sin URL de video: " + payload);
+                    return successVideo(dto, url, start);
+                }
+            }
+        }
+        return failed(dto, "Respuesta inesperada del Space: " + stream);
+    }
+
+    /**
+     * Busca de forma recursiva la primera URL dentro de la salida de Gradio.
+     *
+     * @param el elemento JSON que se va a inspeccionar
+     * @return URL encontrada o {@code null} si no existe
+     */
+    private String findUrl(JsonElement el) {
+        if (el == null || el.isJsonNull()) return null;
+        if (el.isJsonObject()) {
+            JsonObject o = el.getAsJsonObject();
+            String url = stringValue(o, "url");
+            if (url != null && url.startsWith("http")) return url;
+            for (var entry : o.entrySet()) {
+                String found = findUrl(entry.getValue());
+                if (found != null) return found;
+            }
+        } else if (el.isJsonArray()) {
+            for (var item : el.getAsJsonArray()) {
+                String found = findUrl(item);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /**
