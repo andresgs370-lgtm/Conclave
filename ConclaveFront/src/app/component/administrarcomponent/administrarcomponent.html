@@ -1,4 +1,3 @@
-<!-- eslint-disable complexity -->
 <section class="admin-hero text-center">
   <span class="eyebrow animate__animated animate__fadeInDown">Panel</span>
   <h1 class="display-5 fw-bold animate__animated animate__fadeInDown animate__delay-1s">Administración</h1>
@@ -15,15 +14,15 @@
     <button type="button" role="tab" [class.active]="tab === 'historial'" (click)="cambiarTab('historial')">Historial</button>
   </div>
 
-  <div class="toast-msg" *ngIf="mensaje">{{ mensaje }}</div>
+  <div class="toast-msg" [hidden]="!mensaje">{{ mensaje }}</div>
 
-  <div class="glass-card" *ngIf="tab === 'usuarios'">
+  <div class="glass-card" [hidden]="tab !== 'usuarios'">
     <div class="card-tools">
       <input class="form-control admin-input" type="search" placeholder="Buscar por usuario o correo"
              [(ngModel)]="filtro" aria-label="Buscar usuarios">
       <span class="count">{{ usuariosFiltrados.length }} de {{ usuarios.length }} usuarios</span>
     </div>
-    <!-- eslint-disable complexity -->
+
     <div class="table-responsive">
       <table class="table admin-table align-middle mb-0">
         <thead>
@@ -37,15 +36,17 @@
           </td>
           <td><span class="role" [class.role-admin]="u.role === 'ADMIN'">{{ u.role }}</span></td>
           <td>
-              <span class="state" *ngIf="u.enabled !== undefined" [class.state-on]="u.enabled" [class.state-off]="!u.enabled">
-                {{ u.enabled ? 'Activo' : 'Suspendido' }}
-              </span>
-            <span class="sub" *ngIf="u.enabled === undefined">—</span>
+            <span class="state" [hidden]="u.enabled === undefined" [class.state-on]="u.enabled" [class.state-off]="!u.enabled">
+              <span [hidden]="!u.enabled">Activo</span>
+              <span [hidden]="u.enabled">Suspendido</span>
+            </span>
+            <span class="sub" [hidden]="u.enabled !== undefined">—</span>
           </td>
           <td class="text-end actions">
             <button class="btn btn-outline-light btn-sm" (click)="abrirEditar(u)">Editar</button>
             <button class="btn btn-outline-light btn-sm" (click)="cambiarEstado(u)">
-              {{ u.enabled === false ? 'Activar' : 'Suspender' }}
+              <span [hidden]="u.enabled === false">Suspender</span>
+              <span [hidden]="u.enabled !== false">Activar</span>
             </button>
             <button class="btn btn-outline-light btn-sm" (click)="verHistorial(u)">Historial</button>
           </td>
@@ -53,26 +54,30 @@
         </tbody>
       </table>
     </div>
-    <div class="empty" *ngIf="usuariosFiltrados.length === 0">No hay usuarios que coincidan con la búsqueda.</div>
+    <div class="empty" [hidden]="usuariosFiltrados.length > 0">No hay usuarios que coincidan con la búsqueda.</div>
   </div>
 
-  <div class="glass-card key-card" *ngIf="tab === 'apikey'">
+  <div class="glass-card key-card" [hidden]="tab !== 'apikey'">
     <h5 class="mb-1">API key activa</h5>
     <p class="sub mb-3">Al cambiarla, todo lo que use la clave anterior dejará de funcionar.</p>
 
     <div class="key-row">
-      <input class="form-control admin-input mono" readonly [value]="keyVisible ? apiKey : keyEnmascarada" aria-label="API key">
-      <button class="btn btn-outline-light" (click)="keyVisible = !keyVisible">{{ keyVisible ? 'Ocultar' : 'Mostrar' }}</button>
+      <input class="form-control admin-input mono" readonly [hidden]="!keyVisible" [value]="apiKey" aria-label="API key visible">
+      <input class="form-control admin-input mono" readonly [hidden]="keyVisible" [value]="keyEnmascarada" aria-label="API key oculta">
+      <button class="btn btn-outline-light" (click)="keyVisible = !keyVisible">
+        <span [hidden]="keyVisible">Mostrar</span>
+        <span [hidden]="!keyVisible">Ocultar</span>
+      </button>
     </div>
 
     <div class="key-actions">
       <button class="btn btn-primary" (click)="abrirCambiarKey()">Cambiar API key</button>
       <button class="btn btn-outline-danger" (click)="regenerarKey()">Generar nueva</button>
     </div>
-    <div class="form-error" *ngIf="keyError">{{ keyError }}</div>
+    <div class="form-error" [hidden]="!keyError">{{ keyError }}</div>
   </div>
 
-  <div class="glass-card" *ngIf="tab === 'historial'">
+  <div class="glass-card" [hidden]="tab !== 'historial'">
     <div class="card-tools">
       <select class="form-select admin-input" [(ngModel)]="histUsuarioId" (change)="cargarHistorial()" aria-label="Filtrar por usuario">
         <option [ngValue]="null">Todos los usuarios</option>
@@ -93,11 +98,11 @@
         </tbody>
       </table>
     </div>
-    <div class="empty" *ngIf="historial.length === 0">{{ histMensaje }}</div>
+    <div class="empty" [hidden]="historial.length > 0">{{ histMensaje }}</div>
   </div>
 </section>
 
-<div class="overlay" *ngIf="editando" (click)="cerrarEditar()">
+<div class="overlay" [hidden]="!editando" (click)="cerrarEditar()">
   <form class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()" (ngSubmit)="guardarUsuario()">
     <h5 class="mb-3">Editar usuario</h5>
     <label class="field">Usuario
@@ -112,7 +117,7 @@
         <option value="ADMIN">ADMIN</option>
       </select>
     </label>
-    <div class="form-error" *ngIf="editError">{{ editError }}</div>
+    <div class="form-error" [hidden]="!editError">{{ editError }}</div>
     <div class="modal-actions">
       <button type="button" class="btn btn-outline-light" (click)="cerrarEditar()">Cancelar</button>
       <button type="submit" class="btn btn-primary">Guardar cambios</button>
@@ -120,7 +125,7 @@
   </form>
 </div>
 
-<div class="overlay" *ngIf="cambiandoKey" (click)="cambiandoKey = false">
+<div class="overlay" [hidden]="!cambiandoKey" (click)="cambiandoKey = false">
   <form class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()" (ngSubmit)="guardarKey()">
     <h5 class="mb-3">Cambiar API key</h5>
     <label class="field">Nueva API key
@@ -134,7 +139,7 @@
   </form>
 </div>
 
-<div class="overlay" *ngIf="confirmandoRegenerar" (click)="confirmandoRegenerar = false">
+<div class="overlay" [hidden]="!confirmandoRegenerar" (click)="confirmandoRegenerar = false">
   <div class="modal-card animate__animated animate__zoomIn animate__faster" (click)="$event.stopPropagation()">
     <h5 class="mb-3">Generar nueva API key</h5>
     <p class="sub">Se generará una nueva API key y la anterior dejará de funcionar. ¿Continuar?</p>
