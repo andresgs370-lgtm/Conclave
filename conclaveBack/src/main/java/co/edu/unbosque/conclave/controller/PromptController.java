@@ -55,7 +55,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/prompt")
-@CrossOrigin(origins = { "http://localhost:8080", "http://localhost:8081", "http://localhost:4200" })
+@CrossOrigin(origins = { "http://localhost:8080", "http://localhost:8081", "http://localhost:4200,https://conclaveia.netlify.app" })
 @Tag(name = "Generación de contenido", description = "Genera contenido multimedia con proveedores configurados")
 @SecurityRequirement(name = "bearerAuth")
 public class PromptController {

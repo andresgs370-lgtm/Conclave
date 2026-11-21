@@ -25,7 +25,9 @@ import co.edu.unbosque.conclave.service.PromptHistoryService;
 @CrossOrigin(origins = {
         "http://localhost:8080",
         "http://localhost:8081",
-        "http://localhost:4200"
+        "http://localhost:4200",
+        "https://conclaveia.netlify.app"
+        
 })
 public class PromptHistoryController {
 
