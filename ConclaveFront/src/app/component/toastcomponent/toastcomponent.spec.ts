@@ -14,7 +14,7 @@ describe('Toastcomponent', () => {
     await TestBed.configureTestingModule({
       declarations: [Toastcomponent],
       imports: [RouterModule],
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([{ path: '**', children: [] }])],
     }).compileComponents();
 
     fixture = TestBed.createComponent(Toastcomponent);

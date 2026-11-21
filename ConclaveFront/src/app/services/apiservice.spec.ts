@@ -111,7 +111,7 @@ describe('Apiservice', () => {
   it('generate envía null en las opciones que no se indican', () => {
     const resultados: GenerationResult[] = [{ provider: 'CLOUDFLARE', status: 'SUCCESS' }];
     let recibido: GenerationResult[] = [];
-    service.generate('un gato', 'IMAGE', undefined, 'CLOUDFLARE').subscribe(r => (recibido = r));
+    service.generate('un gato', 'IMAGE', { imageProvider: 'CLOUDFLARE' }).subscribe(r => (recibido = r));
 
     const req = http.expectOne(`${baseUrl}/prompt/generar`);
     expect(req.request.method).toBe('POST');
