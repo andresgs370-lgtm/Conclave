@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { ApiService } from '../../services/api.service';
+import { Apiservice } from '../../services/apiservice';
 
 /**
  * Página para recuperar la contraseña en dos pasos: primero se solicita un código
@@ -45,7 +45,7 @@ export class Recuperarcomponent {
    * @param api servicio de comunicación con el backend
    * @param router enrutador para volver al inicio de sesión
    */
-  constructor(private api: ApiService, private router: Router) {}
+  constructor(private api: Apiservice, private router: Router) {}
 
   /** Solicita al backend el envío del código de restablecimiento al correo. */
   solicitarCodigo(): void {

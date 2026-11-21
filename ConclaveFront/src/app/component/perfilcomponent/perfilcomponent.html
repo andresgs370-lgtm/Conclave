@@ -27,6 +27,35 @@
       <p class="profile-error" [hidden]="!profileError">{{ profileError }}</p>
     </div>
 
+    <div class="keys-section" *ngIf="esAdmin">
+      <div class="history-title">
+        <h2>API keys de las IA</h2>
+        <button class="history-refresh" type="button" (click)="cargarKeys()">Actualizar</button>
+      </div>
+      <p class="keys-hint">Solo los administradores ven esta sección. Cloudflare usa el formato ACCOUNT_ID|API_TOKEN.</p>
+      <p class="keys-ok" [hidden]="!keyMensaje">{{ keyMensaje }}</p>
+      <p class="history-error" [hidden]="!keyError">{{ keyError }}</p>
+
+      <div class="key-row" *ngFor="let key of providerKeys">
+        <div class="key-info">
+          <strong>{{ key.provider }}</strong>
+          <span class="key-mask">{{ key.maskedKey || 'Sin configurar' }}</span>
+        </div>
+        <span class="key-state" [class.key-on]="key.active" [class.key-off]="!key.active">{{ key.active ? 'Activo' : 'Inactivo' }}</span>
+        <button class="history-refresh" type="button" (click)="editarKey(key)" [hidden]="keyEditando === key.provider">Editar</button>
+
+        <form class="key-form" *ngIf="keyEditando === key.provider" (ngSubmit)="guardarKey()">
+          <input class="form-control" type="password" name="newKey" [(ngModel)]="keyForm.newKey"
+                 placeholder="Nueva API key (vacío = conservar la actual)" autocomplete="new-password">
+          <label class="key-toggle">
+            <input type="checkbox" name="active" [(ngModel)]="keyForm.active"> Activo
+          </label>
+          <button class="history-refresh" type="submit" [disabled]="guardandoKey">{{ guardandoKey ? 'Guardando...' : 'Guardar' }}</button>
+          <button class="history-refresh" type="button" (click)="cancelarKey()">Cancelar</button>
+        </form>
+      </div>
+    </div>
+
     <div class="history-section">
       <div class="history-title">
         <h2>Historial de prompts</h2>

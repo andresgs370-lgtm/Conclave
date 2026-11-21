@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../services/api.service';
-import { AuthService } from '../../services/auth.service';
+import { Apiservice } from '../../services/apiservice';
+import { Authservice } from '../../services/authservice';
 
 /** Componente de inicio de sesión. */
 @Component({
@@ -24,7 +24,7 @@ export class Logincomponent {
     reset: 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.',
   };
 
-  constructor(private api: ApiService, private auth: AuthService, private router: Router, private route: ActivatedRoute) {
+  constructor(private api: Apiservice, private auth: Authservice, private router: Router, private route: ActivatedRoute) {
     this.route.queryParamMap.subscribe((params) => {
       const clave = Object.keys(Logincomponent.mensajes).find(key => params.get(key) === 'true');
       if (clave) {

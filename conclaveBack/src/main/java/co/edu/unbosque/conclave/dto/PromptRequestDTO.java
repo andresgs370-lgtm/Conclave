@@ -34,6 +34,8 @@ public class PromptRequestDTO {
 	private String videoProvider;
 	/** Identificador opcional del modelo para proveedores configurables. */
 	private String videoModel;
+	/** Proveedor de generación de audio seleccionado por el usuario. */
+	private String audioProvider;
 	/** URL pública de la imagen inicial para los modelos de imagen a video. */
 	private String imageUrl;
 	/** URL pública del video de entrada para los modelos de edición de video. */
@@ -106,6 +108,12 @@ public class PromptRequestDTO {
 	/** @param videoUrl URL pública del video de entrada */
 	public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 
+	/** @return proveedor de generación de audio seleccionado */
+	public String getAudioProvider() { return audioProvider; }
+
+	/** @param audioProvider proveedor de generación de audio seleccionado */
+	public void setAudioProvider(String audioProvider) { this.audioProvider = audioProvider; }
+
 	public void setModel(String model) {
 		this.model = model;
 	}
@@ -113,7 +121,7 @@ public class PromptRequestDTO {
 	@Override
 	public int hashCode() {
 		return Objects.hash(format, model, outputType, promptText, imageProvider, videoProvider, videoModel,
-				imageUrl, videoUrl);
+				imageUrl, videoUrl, audioProvider);
 	}
 
 	@Override
@@ -128,14 +136,16 @@ public class PromptRequestDTO {
 		return format == other.format && Objects.equals(model, other.model) && outputType == other.outputType
 				&& Objects.equals(promptText, other.promptText) && Objects.equals(imageProvider, other.imageProvider)
 				&& Objects.equals(videoProvider, other.videoProvider) && Objects.equals(videoModel, other.videoModel)
-				&& Objects.equals(imageUrl, other.imageUrl) && Objects.equals(videoUrl, other.videoUrl);
+				&& Objects.equals(imageUrl, other.imageUrl) && Objects.equals(videoUrl, other.videoUrl)
+				&& Objects.equals(audioProvider, other.audioProvider);
 	}
 
 	@Override
 	public String toString() {
 		return "PromptRequestDTO [promptText=" + promptText + ", outputType=" + outputType + ", format=" + format
 				+ ", model=" + model + ", imageProvider=" + imageProvider + ", videoProvider=" + videoProvider
-				+ ", videoModel=" + videoModel + ", imageUrl=" + imageUrl + ", videoUrl=" + videoUrl + "]";
+				+ ", videoModel=" + videoModel + ", imageUrl=" + imageUrl + ", videoUrl=" + videoUrl
+				+ ", audioProvider=" + audioProvider + "]";
 	}
 
 

@@ -1,15 +1,19 @@
-import { Component } from '@angular/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { ApiService, GenerationResult } from '../../services/api.service';
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, filter } from 'rxjs';
+import { GenerationResult } from '../../services/apiservice';
+import { GeneracionService } from '../../services/generacionservice';
 
-/** Componente para solicitar y visualizar videos generados. */
+/**
+ * Componente para solicitar y visualizar videos generados. La generación la ejecuta
+ * {@link GeneracionService}, así que continúa aunque el usuario cambie de página.
+ */
 @Component({
   selector: 'app-videocomponent',
   standalone: false,
   styleUrl: './videocomponent.css',
   templateUrl: './videocomponent.html',
 })
-export class Videocomponent {
+export class Videocomponent implements OnDestroy {
   prompt = '';
   results: GenerationResult[] = [];
   error = '';
@@ -27,10 +31,28 @@ export class Videocomponent {
   /** Modelo de video seleccionado. */
   videoProvider = this.videoModels[0].value;
 
-  private readonly genericError = 'No fue posible generar el contenido. Revisa la conexión con el backend.';
   loginRequired = !localStorage.getItem('conclave_token');
 
-  constructor(private api: ApiService) {}
+  /** Suscripción a los cambios de estado de la generación de video. */
+  private readonly suscripcion: Subscription;
+
+  /**
+   * Recupera la última generación de video y escucha sus cambios.
+   *
+   * @param generacion servicio global de generación
+   */
+  constructor(private generacion: GeneracionService) {
+    this.prompt = generacion.estado('VIDEO').prompt;
+    this.sincronizar();
+    this.suscripcion = generacion.cambios$
+      .pipe(filter(tipo => tipo === 'VIDEO'))
+      .subscribe(() => this.sincronizar());
+  }
+
+  /** Deja de escuchar los cambios al salir de la página; la generación sigue en curso. */
+  ngOnDestroy(): void {
+    this.suscripcion.unsubscribe();
+  }
 
   /** Abre los enlaces de descarga de los resultados disponibles. */
   downloadAll(): void {
@@ -41,81 +63,15 @@ export class Videocomponent {
   sharePrompt(): void {
     const shareText = this.prompt;
     if (navigator.share) {
-      navigator.share({ title: 'Prompt de Conclave', text: shareText }).catch((error: unknown) => this.handleShareError(error));
+      navigator.share({ title: 'Prompt de Conclave', text: shareText }).catch(() => undefined);
     } else {
       navigator.clipboard.writeText(shareText).catch(() => { this.error = 'No fue posible copiar el prompt.'; });
     }
   }
 
-  /** Maneja errores al compartir, ignorando la cancelación del usuario. */
-  private handleShareError(error: unknown): void {
-    if (error instanceof Error && error.name !== 'AbortError') {
-      this.error = 'No fue posible compartir el prompt.';
-    }
-  }
-
-  /** Indica si el backend informó una configuración de proveedor ausente. */
-  private static isConfigurationError(error: unknown): boolean {
-    return error instanceof HttpErrorResponse && error.status === 503;
-  }
-
-  /** Convierte un error HTTP o de conexión en un mensaje legible. */
-  private extractError(error: unknown): string {
-    if (Videocomponent.isConfigurationError(error)) {
-      return 'Falta configurar o activar la API key del modelo seleccionado. Un administrador debe configurarla en el panel de administración.';
-    }
-    const body = error instanceof HttpErrorResponse ? error.error : null;
-    return Videocomponent.messageFromBody(body) ?? Videocomponent.messageFromHttpError(error) ?? this.genericError;
-  }
-
-  /** Obtiene un mensaje legible de la respuesta del servidor. */
-  private static messageFromBody(body: unknown): string | null {
-    const directMessage = Videocomponent.bodyText(body);
-    if (directMessage !== null) return directMessage;
-    const record = Videocomponent.bodyRecord(body);
-    if (!record) return null;
-    return Videocomponent.firstText(record, ['message', 'detail'])
-      ?? Videocomponent.nestedErrorMessage(record['error']);
-  }
-
-  /** Devuelve el cuerpo cuando es texto no vacío. */
-  private static bodyText(body: unknown): string | null {
-    return typeof body === 'string' && body.trim() ? body : null;
-  }
-
-  /** Convierte el cuerpo a un registro cuando es un objeto. */
-  private static bodyRecord(body: unknown): Record<string, unknown> | null {
-    return body && typeof body === 'object' ? body as Record<string, unknown> : null;
-  }
-
-  /** Busca el primer texto disponible entre las propiedades indicadas. */
-  private static firstText(record: Record<string, unknown>, keys: string[]): string | null {
-    for (const key of keys) {
-      const value = record[key];
-      if (typeof value === 'string') return value;
-    }
-    return null;
-  }
-
-  /** Extrae el mensaje de una propiedad error anidada. */
-  private static nestedErrorMessage(value: unknown): string | null {
-    if (typeof value === 'string') return value;
-    if (!value || typeof value !== 'object') return null;
-    const nested = value as Record<string, unknown>;
-    return typeof nested['message'] === 'string' ? nested['message'] : null;
-  }
-
-  /** Obtiene un mensaje HTTP cuando el cuerpo no aporta detalles. */
-  private static messageFromHttpError(error: unknown): string | null {
-    if (!(error instanceof HttpErrorResponse)) return null;
-    if (error.status) return `Error HTTP ${error.status}: ${error.statusText || 'La solicitud fue rechazada por el servidor.'}`;
-    return error.message || null;
-  }
-
   /** Valida el prompt y solicita la generación del video. */
   generate(): void {
     this.error = '';
-    this.results = [];
     if (!this.prompt.trim()) {
       this.error = 'Escribe un prompt para continuar.';
       return;
@@ -124,18 +80,14 @@ export class Videocomponent {
       this.error = 'Inicia sesión para generar contenido.';
       return;
     }
-    this.loading = true;
-    this.api.generate(this.prompt, 'VIDEO', this.format, undefined, this.videoProvider).subscribe({
-      next: (response) => {
-        this.results = Array.isArray(response) ? response : [];
-        this.loading = false;
-        const failedResult = this.results.find(result => result.status !== 'SUCCESS');
-        if (failedResult) this.error = failedResult.errorMessage || 'La generación no pudo completarse.';
-      },
-      error: (error: unknown) => {
-        this.error = this.extractError(error);
-        this.loading = false;
-      },
-    });
+    this.generacion.generar('VIDEO', this.prompt, { format: this.format, videoProvider: this.videoProvider });
+  }
+
+  /** Copia el estado guardado en el servicio a los campos que muestra la vista. */
+  private sincronizar(): void {
+    const estado = this.generacion.estado('VIDEO');
+    this.loading = estado.cargando;
+    this.error = estado.error;
+    this.results = estado.resultados;
   }
 }

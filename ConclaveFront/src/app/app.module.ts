@@ -19,6 +19,7 @@ import { Perfilcomponent } from './component/perfilcomponent/perfilcomponent';
 import { Administrarcomponent } from './component/administrarcomponent/administrarcomponent';
 import { Verificarcomponent } from './component/verificarcomponent/verificarcomponent';
 import { Recuperarcomponent } from './component/recuperarcomponent/recuperarcomponent';
+import { Toastcomponent } from './component/toastcomponent/toastcomponent';
 /**
  * Módulo raíz de la aplicación Conclave.
  */
@@ -38,6 +39,7 @@ import { Recuperarcomponent } from './component/recuperarcomponent/recuperarcomp
     Administrarcomponent,
     Verificarcomponent,
     Recuperarcomponent,
+    Toastcomponent,
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, RouterModule.forRoot(routes)],
   bootstrap: [App],

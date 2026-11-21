@@ -15,18 +15,22 @@
           <div class="mb-4">
             <label for="prompt" class="form-label">Tu prompt</label>
             <textarea id="prompt" class="form-control" name="prompt" [(ngModel)]="prompt" rows="5"
-              placeholder="Un gato astronauta flotando en una galaxia de colores, estilo ilustración digital..."></textarea>
+                      placeholder="Un gato astronauta flotando en una galaxia de colores, estilo ilustración digital..."></textarea>
             <div class="hint">Mientras más detalles des, mejor será el resultado.</div>
           </div>
           <div class="mb-3">
             <label for="imageProvider" class="form-label">Proveedor de generación</label>
             <select id="imageProvider" class="form-select" [(ngModel)]="imageProvider" name="imageProvider">
-              <option value="CLOUDFLARE">Cloudflare — FLUX.1 schnell (cuota gratuita)</option>
+              <option value="CLOUDFLARE">Cloudflare — FLUX.1 schnell (gratis)</option>
+              <option value="POLLINATIONS">Pollinations.ai — FLUX (gratis, sin API key)</option>
+              <option value="TOGETHER_AI">Together AI — FLUX.1 schnell (gratis)</option>
               <option value="GEMINI">Google Gemini — generación de imágenes</option>
             </select>
-            <div class="hint">Puedes cambiar de proveedor en cada generación. Cada proveedor requiere su API Key configurada en Swagger.</div>
+            <div class="hint">Puedes cambiar de proveedor en cada generación. Las API keys se configuran en Administrar → Proveedores IA.</div>
           </div>
           <div class="note mb-4" [hidden]="!(imageProvider === 'CLOUDFLARE')">Cloudflare Workers AI: cuota gratuita diaria compartida entre modelos; puede agotarse.</div>
+          <div class="note mb-4" [hidden]="!(imageProvider === 'POLLINATIONS')">Pollinations.ai: funciona sin API key (una imagen cada 15 segundos y puede incluir marca de agua). Con una key gratuita se quitan ambos límites.</div>
+          <div class="note mb-4" [hidden]="!(imageProvider === 'TOGETHER_AI')">Together AI: modelo FLUX.1 schnell gratuito. Requiere una API key gratuita de together.ai.</div>
           <div class="note mb-4" [hidden]="!(imageProvider === 'GEMINI')">Gemini: disponibilidad y cuota dependen del modelo y del plan de tu proyecto de Google AI Studio.</div>
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' Generar imagen ' }}</button>
           <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
@@ -66,7 +70,7 @@
             </div>
           </div>
           <div class="actions">
-            <button type="button" class="btn btn-outline-light" (click)="prompt = ''; results = []; error = ''">Nueva generación</button>
+            <button type="button" class="btn btn-outline-light" (click)="nuevaGeneracion()">Nueva generación</button>
             <button type="button" class="btn btn-outline-light" (click)="downloadAll()" [disabled]="!results.length">Descargar resultados</button>
             <button type="button" class="btn btn-outline-light" (click)="sharePrompt()" [disabled]="!prompt">Compartir prompt</button>
           </div>

@@ -88,6 +88,33 @@ public class PromptHistoryService {
     }
 
     /**
+     * Obtiene el historial de prompts de todos los usuarios, ordenado de más reciente
+     * a más antiguo. Solo debe usarse desde endpoints de administrador.
+     *
+     * @return lista de {@link PromptHistoryDTO} de todos los usuarios
+     */
+    @Transactional(readOnly = true)
+    public List<PromptHistoryDTO> obtenerHistorialCompleto() {
+        return historyRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    /**
+     * Obtiene el historial de prompts de un usuario por su identificador, ordenado
+     * de más reciente a más antiguo. Solo debe usarse desde endpoints de administrador.
+     *
+     * @param userId identificador del usuario
+     * @return lista de {@link PromptHistoryDTO} del usuario
+     */
+    @Transactional(readOnly = true)
+    public List<PromptHistoryDTO> obtenerHistorialPorUsuario(Long userId) {
+        return historyRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toDTO)
+                .toList();
+    }
+
+    /**
      * Determina el identificador del proveedor o modelo de IA utilizado según el tipo de salida.
      *
      * @param request solicitud con el tipo de salida y parámetros opcionales de proveedor/modelo
@@ -101,7 +128,9 @@ public class PromptHistoryService {
             case IMAGE -> (request.getImageProvider() != null && !request.getImageProvider().isBlank())
                     ? request.getImageProvider().trim()
                     : "CLOUDFLARE";
-            case AUDIO -> "GEMINI";
+            case AUDIO -> (request.getAudioProvider() != null && !request.getAudioProvider().isBlank())
+                    ? request.getAudioProvider().trim()
+                    : "GEMINI";
             case VIDEO -> {
                 if (request.getVideoModel() != null && !request.getVideoModel().isBlank()) {
                     yield request.getVideoModel().trim();
@@ -109,7 +138,7 @@ public class PromptHistoryService {
                 if (request.getVideoProvider() != null && !request.getVideoProvider().isBlank()) {
                     yield request.getVideoProvider().trim();
                 }
-                yield "AGNES_AI";
+                yield "HF_MINIMAX_H3";
             }
             default -> request.getOutputType().name();
         };

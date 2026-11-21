@@ -5,7 +5,7 @@
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
       <h1 class="page-title">Crear sonido</h1>
-      <p class="page-sub">Escribe el texto que quieres convertir en voz. La generación utiliza Gemini TTS.</p>
+      <p class="page-sub">Escribe el texto que quieres convertir en voz y elige la IA que lo narrará.</p>
     </div>
 
     <div class="row g-4">
@@ -22,10 +22,18 @@
               [(ngModel)]="prompt"
               rows="4"
               placeholder="Escribe el texto que quieres escuchar narrado en español..."></textarea>
-            <div class="hint">Gemini convertirá el texto en voz; no genera música ni efectos de sonido.</div>
+            <div class="hint">El modelo convertirá el texto en voz; no genera música ni efectos de sonido.</div>
           </div>
 
 
+
+          <div class="mb-3">
+            <label for="audioProvider" class="form-label">Proveedor de voz</label>
+            <select id="audioProvider" class="form-select" [(ngModel)]="audioProvider" name="audioProvider">
+              <option *ngFor="let provider of audioProviders" [value]="provider.value">{{ provider.label }}</option>
+            </select>
+            <div class="hint">Las API keys se configuran en Administrar → Proveedores IA. Cloudflare usa la misma key de las imágenes.</div>
+          </div>
 
           <div class="note">
             <span class="ai-no">✖ Estos modelos no generan imágenes ni video.</span>
