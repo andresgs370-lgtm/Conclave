@@ -34,7 +34,11 @@ public class PromptRequestDTO {
 	private String videoProvider;
 	/** Identificador opcional del modelo para proveedores configurables. */
 	private String videoModel;
-	
+	/** URL pública de la imagen inicial para los modelos de imagen a video. */
+	private String imageUrl;
+	/** URL pública del video de entrada para los modelos de edición de video. */
+	private String videoUrl;
+
 	/** Constructor por defecto. */
 	public PromptRequestDTO() {
 	}
@@ -90,13 +94,26 @@ public class PromptRequestDTO {
 	public void setVideoModel(String videoModel) { this.videoModel = videoModel; }
 	public void setImageProvider(String imageProvider) { this.imageProvider = imageProvider; }
 
+	/** @return URL pública de la imagen inicial */
+	public String getImageUrl() { return imageUrl; }
+
+	/** @param imageUrl URL pública de la imagen inicial */
+	public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+	/** @return URL pública del video de entrada */
+	public String getVideoUrl() { return videoUrl; }
+
+	/** @param videoUrl URL pública del video de entrada */
+	public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
+
 	public void setModel(String model) {
 		this.model = model;
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(format, model, outputType, promptText, imageProvider, videoProvider, videoModel);
+		return Objects.hash(format, model, outputType, promptText, imageProvider, videoProvider, videoModel,
+				imageUrl, videoUrl);
 	}
 
 	@Override
@@ -109,14 +126,17 @@ public class PromptRequestDTO {
 			return false;
 		PromptRequestDTO other = (PromptRequestDTO) obj;
 		return format == other.format && Objects.equals(model, other.model) && outputType == other.outputType
-				&& Objects.equals(promptText, other.promptText) && Objects.equals(imageProvider, other.imageProvider) && Objects.equals(videoProvider, other.videoProvider) && Objects.equals(videoModel, other.videoModel);
+				&& Objects.equals(promptText, other.promptText) && Objects.equals(imageProvider, other.imageProvider)
+				&& Objects.equals(videoProvider, other.videoProvider) && Objects.equals(videoModel, other.videoModel)
+				&& Objects.equals(imageUrl, other.imageUrl) && Objects.equals(videoUrl, other.videoUrl);
 	}
 
 	@Override
 	public String toString() {
 		return "PromptRequestDTO [promptText=" + promptText + ", outputType=" + outputType + ", format=" + format
-				+ ", model=" + model + ", imageProvider=" + imageProvider + ", videoProvider=" + videoProvider + ", videoModel=" + videoModel + "]";
+				+ ", model=" + model + ", imageProvider=" + imageProvider + ", videoProvider=" + videoProvider
+				+ ", videoModel=" + videoModel + ", imageUrl=" + imageUrl + ", videoUrl=" + videoUrl + "]";
 	}
-	
-	
+
+
 }

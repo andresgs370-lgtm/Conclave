@@ -15,20 +15,20 @@ export class Videocomponent {
   error = '';
   loading = false;
   format = 'MP4';
-  videoProvider = 'AGNES_AI';
-  videoModel = '';
+
+  /** Modelos de texto a video de Hugging Face disponibles. Cada uno usa su propia API key. */
+  readonly videoModels: { value: string; label: string }[] = [
+    { value: 'HF_MINIMAX_H3', label: 'MiniMax H3 FlashGen (rápido, con audio)' },
+    { value: 'HF_MINIMAX_TURBO', label: 'MiniMax H3 Turbo (con audio)' },
+    { value: 'HF_OMNI_VIDEO', label: 'Omni Video (3 segundos)' },
+    { value: 'HF_MODELSCOPE', label: 'ModelScope Text-to-Video (clásico)' },
+  ];
+
+  /** Modelo de video seleccionado. */
+  videoProvider = this.videoModels[0].value;
+
   private readonly genericError = 'No fue posible generar el contenido. Revisa la conexión con el backend.';
   loginRequired = !localStorage.getItem('conclave_token');
-
-
-  /** Devuelve el modelo sugerido para el proveedor seleccionado. */
-  modelPlaceholder(): string {
-    if (this.videoProvider === 'FAL_AI') return 'fal-ai/wan/v2.1/1.3b/text-to-video';
-    if (this.videoProvider === 'KINOVI_AI') return 'seedance2-5';
-    if (this.videoProvider === 'REPLICATE') return 'owner/model';
-    if (this.videoProvider === 'HUGGINGFACE') return 'organization/space-name';
-    return 'agnes-video-2.5-flash';
-  }
 
   constructor(private api: ApiService) {}
 
@@ -62,7 +62,7 @@ export class Videocomponent {
   /** Convierte un error HTTP o de conexión en un mensaje legible. */
   private extractError(error: unknown): string {
     if (Videocomponent.isConfigurationError(error)) {
-      return 'Falta configurar o activar una API key requerida en el backend. Agnes AI debe estar configurado en Swagger.';
+      return 'Falta configurar o activar la API key del modelo seleccionado. Un administrador debe configurarla en el panel de administración.';
     }
     const body = error instanceof HttpErrorResponse ? error.error : null;
     return Videocomponent.messageFromBody(body) ?? Videocomponent.messageFromHttpError(error) ?? this.genericError;
@@ -125,7 +125,7 @@ export class Videocomponent {
       return;
     }
     this.loading = true;
-    this.api.generate(this.prompt, 'VIDEO', this.format, undefined, this.videoProvider, this.videoModel.trim() || this.modelPlaceholder()).subscribe({
+    this.api.generate(this.prompt, 'VIDEO', this.format, undefined, this.videoProvider).subscribe({
       next: (response) => {
         this.results = Array.isArray(response) ? response : [];
         this.loading = false;

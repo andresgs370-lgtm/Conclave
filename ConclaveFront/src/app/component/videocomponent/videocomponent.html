@@ -5,7 +5,7 @@
     <div class="page-head text-center animate__animated animate__fadeInDown">
       <span class="eyebrow">Creación</span>
       <h1 class="page-title">Crear video</h1>
-      <p class="page-sub">Describe tu idea y Agnes AI generará un clip de video con inteligencia artificial.</p>
+      <p class="page-sub">Describe tu idea y un modelo de Hugging Face convertirá tu texto en un clip de video con inteligencia artificial.</p>
     </div>
 
     <div class="row g-4">
@@ -28,21 +28,12 @@
 
 
           <div class="mb-3">
-            <label for="videoProvider" class="form-label">Proveedor de video</label>
+            <label for="videoProvider" class="form-label">Modelo de video</label>
             <select id="videoProvider" class="form-select" [(ngModel)]="videoProvider" name="videoProvider">
-              <option value="AGNES_AI">Agnes AI</option>
-              <option value="FAL_AI">fal.ai</option>
-              <option value="KINOVI_AI">Kinovi AI</option>
-              <option value="REPLICATE">Replicate</option>
-              <option value="HUGGINGFACE">Hugging Face (Space)</option>
+              <option *ngFor="let model of videoModels" [value]="model.value">{{ model.label }}</option>
             </select>
           </div>
-          <div class="mb-3" [hidden]="!(videoProvider !== 'AGNES_AI')">
-            <label for="videoModel" class="form-label">Modelo / endpoint</label>
-            <input id="videoModel" class="form-control" [(ngModel)]="videoModel" name="videoModel" [placeholder]="modelPlaceholder()">
-            <div class="hint">Puedes usar el modelo sugerido o escribir otro compatible con el proveedor.</div>
-          </div>
-          <div class="note mb-4">La API key del proveedor seleccionado debe configurarse por un administrador en Swagger. fal.ai, Kinovi y Replicate están integrados. Hugging Face Spaces requiere un endpoint específico y aún no tiene adaptador universal. El consumo puede generar cargos según proveedor/modelo.</div>
+          <div class="note mb-4">Cada modelo usa su propia API key de Hugging Face, configurada por un administrador en el panel de administración. Los modelos gratuitos tienen una cuota diaria de GPU limitada y pueden tardar unos minutos.</div>
           <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando video, puede tardar varios minutos...' : ' 🎬 Generar video ' }}</button>
           <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
         </div>
@@ -71,9 +62,9 @@
                 <p [hidden]="!(result.textContent)" class="mb-2 text-break">{{ result.textContent }}</p>
                 <p [hidden]="!(result.errorMessage)" class="text-danger mb-2">{{ result.errorMessage }}</p>
                 <div [hidden]="!(result.downloadUrl)">
-                  <img [hidden]="!(result.mimeType?.startsWith('image/'))" [src]="result.mimeType?.startsWith('image/') ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
-                  <video [hidden]="!(result.mimeType?.startsWith('video/'))" [src]="result.mimeType?.startsWith('video/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
-                  <audio [hidden]="!(result.mimeType?.startsWith('audio/'))" [src]="result.mimeType?.startsWith('audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
+                  <img [hidden]="!(result.mimeType || '').startsWith('image/')" [src]="(result.mimeType || '').startsWith('image/') ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video [hidden]="!(result.mimeType || '').startsWith('video/')" [src]="(result.mimeType || '').startsWith('video/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
+                  <audio [hidden]="!(result.mimeType || '').startsWith('audio/')" [src]="(result.mimeType || '').startsWith('audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
                   <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
                 </div>
                 <small class="text-secondary" [hidden]="!(result.durationMs)">Tiempo: {{ result.durationMs }} ms</small>

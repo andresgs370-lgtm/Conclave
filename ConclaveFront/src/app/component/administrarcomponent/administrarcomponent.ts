@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 /** Usuario tal como lo devuelve el backend (UserDTO). */
 interface User {
@@ -17,6 +18,15 @@ interface HistItem {
   username: string;
   action: string;
   detail: string;
+}
+
+/** API key registrada para un proveedor de IA. */
+interface ProviderKey {
+  provider: string;
+  maskedKey: string;
+  active: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
 }
 
 /**
@@ -61,23 +71,20 @@ export class Administrarcomponent implements OnInit {
   /** Mensaje de error del modal de edición. */
   editError = '';
 
-  /** Valor actual de la API key. */
-  apiKey = '';
+  /** API keys registradas para los proveedores de IA. */
+  providerKeys: ProviderKey[] = [];
 
-  /** Indica si la API key se muestra completa o enmascarada. */
-  keyVisible = false;
+  /** Proveedor seleccionado para editar su configuración. */
+  providerEditando: ProviderKey | null = null;
 
-  /** Mensaje de error de la pestaña API key. */
+  /** Datos del formulario de API key. */
+  providerForm = { newKey: '', active: false };
+
+  /** Mensaje de error de la gestión de proveedores. */
   keyError = '';
 
-  /** Indica si el modal para cambiar la API key está abierto. */
-  cambiandoKey = false;
-
-  /** Indica si el modal de confirmación para generar una nueva API key está abierto. */
-  confirmandoRegenerar = false;
-
-  /** Valor escrito en el modal para la nueva API key. */
-  nuevaKey = '';
+  /** Indica si se está guardando una API key. */
+  guardandoKey = false;
 
   /** Registros de historial mostrados en la tabla. */
   historial: HistItem[] = [];
@@ -89,10 +96,25 @@ export class Administrarcomponent implements OnInit {
   histMensaje = 'Sin actividad para mostrar.';
 
   /** Inyecta el cliente HTTP y el servicio de sesión. */
-  constructor(private http: HttpClient, private auth: AuthService) {}
+  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
 
-  /** Carga la lista de usuarios al iniciar el componente. */
-  ngOnInit(): void { this.cargarUsuarios(); }
+  /** Carga los datos del panel cuando la sesión pertenece a un administrador. */
+  ngOnInit(): void {
+    if (!this.auth.isLoggedIn || !this.auth.isAdmin) {
+      this.router.navigateByUrl('/login');
+      return;
+    }
+    this.http.get<{ role: string }>(`${this.api}/user/me`, { headers: this.headers }).subscribe({
+      next: user => {
+        if ((user?.role ?? '').toUpperCase() !== 'ADMIN') {
+          this.router.navigateByUrl('/');
+          return;
+        }
+        this.cargarUsuarios();
+      },
+      error: () => this.router.navigateByUrl('/login')
+    });
+  }
 
   /** Muestra un aviso emergente durante unos segundos. */
   private avisar(m: string): void {
@@ -103,7 +125,7 @@ export class Administrarcomponent implements OnInit {
   /** Cambia la pestaña visible y carga los datos que necesita. */
   cambiarTab(t: 'usuarios' | 'apikey' | 'historial'): void {
     this.tab = t;
-    if (t === 'apikey') this.cargarKey();
+    if (t === 'apikey') this.cargarKeys();
     if (t === 'historial') this.cargarHistorial();
   }
 
@@ -174,41 +196,69 @@ export class Administrarcomponent implements OnInit {
     this.cambiarTab('historial');
   }
 
-  /** API key con los primeros 6 y los últimos 4 caracteres visibles. */
-  get keyEnmascarada(): string {
-    const k = this.apiKey;
-    return k ? k.slice(0, 6) + '•'.repeat(Math.max(8, k.length - 10)) + k.slice(-4) : '';
+  /** Nombres visibles de los proveedores de IA. */
+  private readonly nombresProveedores: Record<string, string> = {
+    OPENROUTER: 'OpenRouter',
+    GEMINI: 'Google Gemini',
+    CLOUDFLARE: 'Cloudflare Workers AI',
+    HF_MINIMAX_H3: 'Hugging Face · MiniMax H3 FlashGen',
+    HF_MINIMAX_TURBO: 'Hugging Face · MiniMax H3 Turbo',
+    HF_OMNI_VIDEO: 'Hugging Face · Omni Video',
+    HF_MODELSCOPE: 'Hugging Face · ModelScope Text-to-Video'
+  };
+
+  /** Nombre visible de cada proveedor de IA. */
+  nombreProveedor(provider: string): string {
+    return this.nombresProveedores[provider] ?? provider;
   }
 
-  /** Consulta la API key actual con `GET /apikey`. Espera la forma `{ apiKey: string }`. */
-  cargarKey(): void {
+  /** Consulta las API keys registradas con `GET /admin/apikey/getall`. */
+  cargarKeys(): void {
     this.keyError = '';
-    this.http.get<{ apiKey: string }>(`${this.api}/apikey`, { headers: this.headers }).subscribe({
-      next: r => (this.apiKey = r?.apiKey ?? ''),
-      error: e => (this.keyError = e.status === 404 ? 'El endpoint GET /apikey aún no existe en el backend.' : 'No se pudo cargar la API key.')
+    this.http.get<ProviderKey[]>(`${this.api}/admin/apikey/getall`, { headers: this.headers }).subscribe({
+      next: r => (this.providerKeys = r ?? []),
+      error: e => {
+        this.providerKeys = [];
+        this.keyError = e.status === 403 ? 'No tienes permisos para gestionar las API keys.' : 'No se pudieron cargar las API keys.';
+      }
     });
   }
 
-  /** Abre el modal para escribir una nueva API key. */
-  abrirCambiarKey(): void { this.nuevaKey = ''; this.cambiandoKey = true; }
+  /** Abre el formulario de edición del proveedor seleccionado. */
+  abrirEditarKey(provider: ProviderKey): void {
+    this.providerEditando = provider;
+    this.providerForm = { newKey: '', active: provider.active };
+    this.keyError = '';
+  }
 
-  /** Guarda la API key escrita en el modal con `PUT /apikey`. */
+  /** Cierra el formulario de edición de API key. */
+  cerrarEditarKey(): void {
+    this.providerEditando = null;
+    this.providerForm = { newKey: '', active: false };
+    this.keyError = '';
+  }
+
+  /** Guarda la clave y el estado del proveedor con `PUT /admin/apikey/update/{provider}`. */
   guardarKey(): void {
-    this.http.put(`${this.api}/apikey`, { apiKey: this.nuevaKey.trim() }, { headers: this.headers }).subscribe({
-      next: () => { this.cambiandoKey = false; this.avisar('API key actualizada'); this.cargarKey(); },
-      error: () => (this.keyError = 'No se pudo guardar la API key.')
-    });
-  }
-
-  /** Abre el modal de confirmación antes de generar una nueva API key. */
-  regenerarKey(): void { this.confirmandoRegenerar = true; }
-
-  /** Genera una API key nueva con `POST /apikey/regenerate` tras la confirmación del administrador. */
-  confirmarRegenerar(): void {
-    this.confirmandoRegenerar = false;
-    this.http.post(`${this.api}/apikey/regenerate`, null, { headers: this.headers }).subscribe({
-      next: () => { this.keyVisible = true; this.avisar('Nueva API key generada'); this.cargarKey(); },
-      error: () => (this.keyError = 'No se pudo generar la API key.')
+    if (!this.providerEditando || this.guardandoKey) return;
+    const provider = this.providerEditando.provider;
+    const newKey = this.providerForm.newKey.trim();
+    this.guardandoKey = true;
+    this.keyError = '';
+    this.http.put(`${this.api}/admin/apikey/update/${provider}`, {
+      newKey: newKey || null,
+      active: this.providerForm.active
+    }, { responseType: 'text', headers: this.headers }).subscribe({
+      next: () => {
+        this.guardandoKey = false;
+        this.cerrarEditarKey();
+        this.avisar('Configuración actualizada');
+        this.cargarKeys();
+      },
+      error: e => {
+        this.guardandoKey = false;
+        this.keyError = e.status === 404 ? 'No se encontró el proveedor seleccionado.' : 'No se pudo actualizar la configuración.';
+      }
     });
   }
 
