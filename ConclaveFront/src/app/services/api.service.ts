@@ -39,6 +39,49 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/auth/register`, { username, email, password }, { responseType: 'text' });
   }
 
+  /**
+   * Verifica la cuenta con el código de 6 dígitos enviado al correo al registrarse.
+   *
+   * @param email correo con el que se registró el usuario
+   * @param codigo código recibido por correo
+   * @returns mensaje del backend
+   */
+  verificarRegistro(email: string, codigo: string): Observable<string> {
+    return this.http.post(`${this.baseUrl}/auth/verificar-registro`, { email, codigo }, { responseType: 'text' });
+  }
+
+  /**
+   * Reenvía un código nuevo de verificación de cuenta al correo.
+   *
+   * @param email correo con el que se registró el usuario
+   * @returns mensaje del backend
+   */
+  reenviarCodigo(email: string): Observable<string> {
+    return this.http.post(`${this.baseUrl}/auth/reenviar-codigo`, { email }, { responseType: 'text' });
+  }
+
+  /**
+   * Solicita el envío de un código para restablecer la contraseña.
+   *
+   * @param email correo de la cuenta
+   * @returns mensaje del backend
+   */
+  solicitarReset(email: string): Observable<string> {
+    return this.http.post(`${this.baseUrl}/auth/solicitar-reset`, { email }, { responseType: 'text' });
+  }
+
+  /**
+   * Confirma el restablecimiento de contraseña con el código recibido por correo.
+   *
+   * @param email correo de la cuenta
+   * @param codigo código recibido por correo
+   * @param nuevaPassword nueva contraseña
+   * @returns mensaje del backend
+   */
+  confirmarReset(email: string, codigo: string, nuevaPassword: string): Observable<string> {
+    return this.http.post(`${this.baseUrl}/auth/confirmar-reset`, { email, codigo, nuevaPassword }, { responseType: 'text' });
+  }
+
   /** Obtiene el perfil del usuario autenticado. */
   profile(): Observable<unknown> {
     return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: ApiService.authHeaders() });

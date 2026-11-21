@@ -19,7 +19,7 @@
         />
       </div>
 
-      <div class="mb-4">
+      <div class="mb-2">
         <label for="password" class="form-label">Contraseña</label>
         <input
           id="password"
@@ -29,6 +29,10 @@
           class="form-control form-control-lg"
           placeholder="Tu contraseña"
         />
+      </div>
+
+      <div class="forgot-link mb-4">
+        <a routerLink="/recuperar">¿Olvidaste tu contraseña?</a>
       </div>
 
       <button type="submit" class="btn btn-primary btn-lg w-100" [disabled]="loading">{{ loading ? 'Ingresando...' : 'Entrar' }}</button>
