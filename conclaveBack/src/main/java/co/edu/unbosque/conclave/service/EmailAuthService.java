@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
+import java.util.regex.Pattern;
 /**
  * Servicio que maneja la verificacion de correo al registro y el
  * restablecimiento de contrasena mediante codigo enviado por correo.
@@ -98,29 +98,39 @@ public class EmailAuthService {
      * @return codigo de resultado
      */
     public int verificarRegistro(String email, String codigo) {
-        Optional<User> found = userRepo.findByEmail(email);
-        if (found.isEmpty()) {
-            return 1;
-        }
+		if (email == null || codigo == null || email.isBlank() || codigo.isBlank()) {
+			return 2;
+		}
+		String normalizedEmail = email.trim().toLowerCase();
+		Optional<User> found = userRepo.findByEmail(normalizedEmail);
+		if (found.isEmpty()) {
+			return 1;
+		}
 
-        User user = found.get();
+		User user = found.get();
+		if (user.isEnabled()) {
+			return 0;
+		}
 
-        if (!codigo.equals(user.getVerificationCode())) {
-            return 2;
-        }
+		if (user.getVerificationCode() == null || !codigo.trim().equals(user.getVerificationCode())) {
+			return 2;
+		}
 
-        if (user.getVerificationExpiry() == null
-                || LocalDateTime.now().isAfter(user.getVerificationExpiry())) {
-            return 3;
-        }
+		if (user.getVerificationExpiry() == null
+				|| LocalDateTime.now().isAfter(user.getVerificationExpiry())) {
+			return 3;
+		}
 
-        user.setEnabled(true);
-        user.setVerificationCode(null);
-        user.setVerificationExpiry(null);
-        userRepo.save(user);
-        return 0;
-    }
-
+		user.setEnabled(true);
+		user.setVerificationCode(null);
+		user.setVerificationExpiry(null);
+		userRepo.save(user);
+		return 0;
+	}
+    
+    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
+			"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).{8,}$");
+    
     /**
      * Genera un codigo de reset, lo guarda en el usuario con expiracion
      * de 10 minutos y lo envia al correo registrado.
@@ -135,66 +145,66 @@ public class EmailAuthService {
      * @param email correo del usuario que solicita el reset
      * @return codigo de resultado
      */
-    public int solicitarReset(String email) {
-        Optional<User> found = userRepo.findByEmail(email);
-        if (found.isEmpty()) {
-            return 1;
-        }
+    
 
-        User user = found.get();
-        String codigo = generarCodigo();
-        user.setVerificationCode(codigo);
-        user.setVerificationExpiry(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
-        userRepo.save(user);
+	public int solicitarReset(String email) {
+		if (email == null || email.isBlank()) {
+			return 1;
+		}
+		String normalizedEmail = email.trim().toLowerCase();
+		Optional<User> found = userRepo.findByEmail(normalizedEmail);
+		if (found.isEmpty()) {
+			return 1;
+		}
 
-        boolean enviado = emailService.enviarCodigoReset(email, codigo);
-        if (!enviado) {
-            LOGGER.log(Level.SEVERE, "No se pudo enviar el correo de reset a {0}", email);
-            return 2;
-        }
-        return 0;
-    }
+		User user = found.get();
+		String codigo = generarCodigo();
+		user.setVerificationCode(codigo);
+		user.setVerificationExpiry(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
+		userRepo.save(user);
 
-    /**
-     * Confirma el restablecimiento de contrasena validando el codigo y
-     * guardando la nueva contrasena cifrada con BCrypt.
-     *
-     * <p>Resultados posibles:</p>
-     * <ul>
-     *   <li>{@code 0} — contrasena actualizada correctamente.</li>
-     *   <li>{@code 1} — usuario no encontrado.</li>
-     *   <li>{@code 2} — codigo incorrecto.</li>
-     *   <li>{@code 3} — codigo expirado.</li>
-     * </ul>
-     *
-     * @param email          correo del usuario
-     * @param codigo         codigo de reset ingresado
-     * @param nuevaPassword  nueva contrasena en texto plano
-     * @return codigo de resultado
-     */
-    public int confirmarReset(String email, String codigo, String nuevaPassword) {
-        Optional<User> found = userRepo.findByEmail(email);
-        if (found.isEmpty()) {
-            return 1;
-        }
+		boolean enviado = emailService.enviarCodigoReset(normalizedEmail, codigo);
+		if (!enviado) {
+			LOGGER.log(Level.SEVERE, "No se pudo enviar el correo de reset a {0}", normalizedEmail);
+			return 2;
+		}
+		return 0;
+	}
 
-        User user = found.get();
+	public int confirmarReset(String email, String codigo, String nuevaPassword) {
+		if (email == null || email.isBlank()) {
+			return 1;
+		}
+		if (codigo == null || codigo.isBlank()) {
+			return 2;
+		}
+		if (nuevaPassword == null || !PASSWORD_PATTERN.matcher(nuevaPassword).matches()) {
+			return 4;
+		}
 
-        if (!codigo.equals(user.getVerificationCode())) {
-            return 2;
-        }
+		String normalizedEmail = email.trim().toLowerCase();
+		Optional<User> found = userRepo.findByEmail(normalizedEmail);
+		if (found.isEmpty()) {
+			return 1;
+		}
 
-        if (user.getVerificationExpiry() == null
-                || LocalDateTime.now().isAfter(user.getVerificationExpiry())) {
-            return 3;
-        }
+		User user = found.get();
 
-        user.setPassword(passwordEncoder.encode(nuevaPassword));
-        user.setVerificationCode(null);
-        user.setVerificationExpiry(null);
-        userRepo.save(user);
-        return 0;
-    }
+		if (user.getVerificationCode() == null || !codigo.trim().equals(user.getVerificationCode())) {
+			return 2;
+		}
+
+		if (user.getVerificationExpiry() == null
+				|| LocalDateTime.now().isAfter(user.getVerificationExpiry())) {
+			return 3;
+		}
+
+		user.setPassword(passwordEncoder.encode(nuevaPassword));
+		user.setVerificationCode(null);
+		user.setVerificationExpiry(null);
+		userRepo.save(user);
+		return 0;
+	}
 
     /**
      * Genera un codigo numerico aleatorio de 6 digitos.

@@ -105,10 +105,15 @@ public class AuthController {
 					examples = @ExampleObject(
 							value = "{\"username\":\"admin\",\"password\":\"1234567890\"}"))
 			@RequestBody UserDTO loginRequest) {
+		if (loginRequest == null || loginRequest.getUsername() == null
+				|| loginRequest.getPassword() == null) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body("Credenciales incompletas");
+		}
 		try {
 			Authentication authentication = authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(
-							loginRequest.getUsername(), loginRequest.getPassword()));
+							loginRequest.getUsername().trim(), loginRequest.getPassword()));
 
 			UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 			String jwt = jwtUtil.generateToken(userDetails);
@@ -122,7 +127,7 @@ public class AuthController {
 					new AuthResponseDTO(jwt, userDetails.getUsername(), role));
 		} catch (AuthenticationException e) {
 			LOGGER.log(Level.WARNING, "Intento de autenticación fallido para: {0}",
-					loginRequest.getUsername());
+					loginRequest.getUsername().trim());
 			return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
 					.body("Nombre de usuario o contraseña inválidos o usuario no encontrado");
 		}
@@ -170,6 +175,11 @@ public class AuthController {
 							value = "{\"username\":\"nuevoUsuario\",\"email\":\"user@example.com\","
 									+ "\"password\":\"Contra1@segura\"}"))
 			@RequestBody UserDTO registerRequest) {
+		if (registerRequest == null || registerRequest.getEmail() == null
+				|| registerRequest.getEmail().isBlank()) {
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body("Datos de registro incompletos");
+		}
 
 		// El rol siempre es USER, sin importar lo que envíe el cliente
 		registerRequest.setRole(User.Role.USER);
@@ -186,7 +196,8 @@ public class AuthController {
 			};
 		}
 
-		int envio = emailAuthService.enviarCodigoRegistro(registerRequest.getEmail());
+		String normalizedEmail = registerRequest.getEmail().trim().toLowerCase();
+		int envio = emailAuthService.enviarCodigoRegistro(normalizedEmail);
 		if (envio == 2) {
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
 					.body("Usuario creado pero no se pudo enviar el correo de verificacion.");
@@ -310,14 +321,16 @@ public class AuthController {
 		int result = emailAuthService.confirmarReset(
 				dto.getEmail(), dto.getCodigo(), dto.getNuevaPassword());
 		return switch (result) {
-			case 0 -> ResponseEntity.ok("Contrasena actualizada correctamente.");
-			case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
-					.body("Usuario no encontrado.");
-			case 2 -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
-					.body("Codigo incorrecto.");
-			default -> ResponseEntity.status(HttpStatus.GONE)
-					.body("El codigo ha expirado. Solicita uno nuevo.");
-		};
+		case 0 -> ResponseEntity.ok("Contrasena actualizada correctamente.");
+		case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body("Usuario no encontrado.");
+		case 2 -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body("Codigo incorrecto.");
+		case 4 -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body("La nueva contrasena no cumple los requisitos de seguridad.");
+		default -> ResponseEntity.status(HttpStatus.GONE)
+				.body("El codigo ha expirado. Solicita uno nuevo.");
+	};
 	}
 
 }

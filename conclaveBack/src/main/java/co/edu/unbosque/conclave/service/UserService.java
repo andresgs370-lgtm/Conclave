@@ -81,10 +81,19 @@ public class UserService implements CRUDOperation<UserDTO> {
 	 */
 	@Override
 	public int create(UserDTO data) {
-		if (findUsernameAlreadyTaken(data.getUsername())) {
+		if (data == null || data.getUsername() == null || data.getUsername().isBlank()) {
+			return 3;
+		}
+
+		String normalizedUsername = data.getUsername().trim();
+		String normalizedEmail = data.getEmail() != null && !data.getEmail().isBlank()
+				? data.getEmail().trim().toLowerCase()
+				: null;
+
+		if (findUsernameAlreadyTaken(normalizedUsername)) {
 			return 1;
 		}
-		if (data.getEmail() != null && userRepo.existsByEmail(data.getEmail())) {
+		if (normalizedEmail != null && userRepo.existsByEmail(normalizedEmail)) {
 			return 2;
 		}
 		try {
@@ -94,9 +103,9 @@ public class UserService implements CRUDOperation<UserDTO> {
 		}
 
 		User entity = new User();
-		entity.setUsername(data.getUsername());
-		entity.setEmail(data.getEmail());
-		entity.setFullName(data.getFullName());
+		entity.setUsername(normalizedUsername);
+		entity.setEmail(normalizedEmail);
+		entity.setFullName(data.getFullName() != null ? data.getFullName().trim() : null);
 		entity.setRole(User.Role.USER);
 		entity.setPassword(passwordEncoder.encode(data.getPassword()));
 		entity.setEnabled(false);
@@ -183,31 +192,45 @@ public class UserService implements CRUDOperation<UserDTO> {
 		if (found.isEmpty()) {
 			return 2;
 		}
+		if (newData == null) {
+			return 3;
+		}
 
 		User temp = found.get();
 
-		// Cambio de username: verificar que no esté en uso por otro
+		// Cambio de username: normalizar y verificar que no esté en uso por otro
 		if (newData.getUsername() != null && !newData.getUsername().isBlank()) {
-			Optional<User> existing = userRepo.findByUsername(newData.getUsername());
+			String normalizedUsername = newData.getUsername().trim();
+			Optional<User> existing = userRepo.findByUsername(normalizedUsername);
 			if (existing.isPresent() && !existing.get().getId().equals(id)) {
 				return 1;
 			}
-			temp.setUsername(newData.getUsername());
+			temp.setUsername(normalizedUsername);
 		}
 
-		// Cambio de contraseña: solo si viene no vacía
+		// Cambio de contraseña: validar política de seguridad antes de cifrar
 		if (newData.getPassword() != null && !newData.getPassword().isBlank()) {
+			try {
+				validatePassword(newData.getPassword());
+			} catch (PasswordNotValidException e) {
+				return 3;
+			}
 			temp.setPassword(passwordEncoder.encode(newData.getPassword()));
 		}
 
-		// Cambio de email
+		// Cambio de email: normalizar y validar que no esté en uso por otro
 		if (newData.getEmail() != null && !newData.getEmail().isBlank()) {
-			temp.setEmail(newData.getEmail());
+			String normalizedEmail = newData.getEmail().trim().toLowerCase();
+			Optional<User> existingEmail = userRepo.findByEmail(normalizedEmail);
+			if (existingEmail.isPresent() && !existingEmail.get().getId().equals(id)) {
+				return 3;
+			}
+			temp.setEmail(normalizedEmail);
 		}
 
 		// Cambio de nombre completo
 		if (newData.getFullName() != null) {
-			temp.setFullName(newData.getFullName());
+			temp.setFullName(newData.getFullName().trim());
 		}
 
 		// Cambio de rol
@@ -277,7 +300,10 @@ public class UserService implements CRUDOperation<UserDTO> {
 	 * @return {@code true} si el nombre de usuario ya está en uso
 	 */
 	public boolean findUsernameAlreadyTaken(String username) {
-		return userRepo.findByUsername(username).isPresent();
+		if (username == null || username.isBlank()) {
+			return false;
+		}
+		return userRepo.findByUsername(username.trim()).isPresent();
 	}
 
 	/**
@@ -303,7 +329,10 @@ public class UserService implements CRUDOperation<UserDTO> {
 	 * @return código de resultado
 	 */
 	public int validateCredentials(String username, String password) {
-		Optional<User> userOpt = userRepo.findByUsername(username);
+		if (username == null || username.isBlank() || password == null) {
+			return 1;
+		}
+		Optional<User> userOpt = userRepo.findByUsername(username.trim());
 		if (userOpt.isPresent()) {
 			User user = userOpt.get();
 			if (passwordEncoder.matches(password, user.getPassword())) {
