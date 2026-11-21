@@ -221,6 +221,14 @@ public class UserService implements CRUDOperation<UserDTO> {
 		userRepo.save(temp);
 		return 0;
 	}
+	/**
+	 * Normaliza y aplica el nuevo nombre de usuario si no está en uso por otro registro.
+	 *
+	 * @param target      entidad de usuario a actualizar
+	 * @param id          identificador del usuario actual
+	 * @param newUsername nuevo nombre de usuario propuesto
+	 * @return {@code true} si se aplicó o no requería cambios, {@code false} si ya está en uso
+	 */
 	private boolean applyUsernameUpdate(User target, Long id, String newUsername) {
 		if (newUsername == null || newUsername.isBlank()) {
 			return true;
@@ -233,6 +241,14 @@ public class UserService implements CRUDOperation<UserDTO> {
 		target.setUsername(normalizedUsername);
 		return true;
 	}
+
+	/**
+	 * Valida y cifra la nueva contraseña antes de asignarla al usuario.
+	 *
+	 * @param target      entidad de usuario a actualizar
+	 * @param newPassword nueva contraseña sin cifrar
+	 * @return {@code true} si se actualizó o no requería cambios, {@code false} si no es válida
+	 */
 	private boolean applyPasswordUpdate(User target, String newPassword) {
 		if (newPassword == null || newPassword.isBlank()) {
 			return true;
@@ -246,6 +262,14 @@ public class UserService implements CRUDOperation<UserDTO> {
 		return true;
 	}
 
+	/**
+	 * Normaliza y aplica el nuevo correo electrónico si no pertenece a otro usuario.
+	 *
+	 * @param target   entidad de usuario a actualizar
+	 * @param id       identificador del usuario actual
+	 * @param newEmail nuevo correo electrónico propuesto
+	 * @return {@code true} si se aplicó o no requería cambios, {@code false} si está duplicado
+	 */
 	private boolean applyEmailUpdate(User target, Long id, String newEmail) {
 		if (newEmail == null || newEmail.isBlank()) {
 			return true;
