@@ -20,7 +20,10 @@ export class Registrocomponent {
 
   constructor(private api: ApiService, private router: Router, private cdr: ChangeDetectorRef) {}
 
-  /** Valida los datos y envía la solicitud de registro. */
+  /**
+   * Valida los datos y envía la solicitud de registro. Si el registro es exitoso,
+   * lleva al usuario a la página de verificación con su correo.
+   */
   submit(): void {
     this.error = '';
 
@@ -37,7 +40,7 @@ export class Registrocomponent {
       .subscribe({
         next: () => {
           this.loading = false;
-          this.router.navigate(['/login'], { queryParams: { registered: 'true' } });
+          this.router.navigate(['/verificar'], { queryParams: { email: this.email.trim() } });
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -83,11 +86,24 @@ export class Registrocomponent {
   private static registrationError(err: unknown): string {
     const raw = Registrocomponent.errorPayload(err);
     const message = Registrocomponent.errorText(raw).toLowerCase();
-    return Registrocomponent.usernameError(message)
-      || Registrocomponent.emailError(message)
-      || Registrocomponent.passwordError(message)
-      || Registrocomponent.badRequestError(err, raw)
-      || 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
+    const candidatos = [
+      Registrocomponent.serverError(err, raw),
+      Registrocomponent.usernameError(message),
+      Registrocomponent.emailError(message),
+      Registrocomponent.passwordError(message),
+      Registrocomponent.badRequestError(err, raw),
+    ];
+    return candidatos.find(Boolean) ?? 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
+  }
+
+  /**
+   * Devuelve el mensaje del servidor para errores HTTP 500, por ejemplo cuando la
+   * cuenta se creó pero no se pudo enviar el correo de verificación.
+   */
+  private static serverError(err: unknown, raw: unknown): string {
+    return Registrocomponent.httpStatus(err) === 500
+      ? Registrocomponent.errorText(raw) || 'Ocurrió un error en el servidor. Inténtalo nuevamente.'
+      : '';
   }
 
   /** Extrae el cuerpo de error de una respuesta HTTP. */
