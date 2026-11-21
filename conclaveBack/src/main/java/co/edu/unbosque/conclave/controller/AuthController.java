@@ -1,9 +1,12 @@
 package co.edu.unbosque.conclave.controller;
 
 import co.edu.unbosque.conclave.dto.AuthResponseDTO;
+import co.edu.unbosque.conclave.dto.ResetPasswordDTO;
 import co.edu.unbosque.conclave.dto.UserDTO;
+import co.edu.unbosque.conclave.dto.VerificacionDTO;
 import co.edu.unbosque.conclave.model.User;
 import co.edu.unbosque.conclave.security.JwtUtil;
+import co.edu.unbosque.conclave.service.EmailAuthService;
 import co.edu.unbosque.conclave.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -48,18 +51,24 @@ public class AuthController {
 	/** Servicio para operaciones relacionadas con usuarios. */
 	private final UserService userService;
 
+	/** Servicio para verificacion de correo y reset de contrasena. */
+	private final EmailAuthService emailAuthService;
+
 	/**
 	 * Constructor que inicializa las dependencias del controlador.
 	 *
 	 * @param authenticationManager gestor de autenticación
 	 * @param jwtUtil               utilidad para tokens JWT
 	 * @param userService           servicio de usuarios
+	 * @param emailAuthService      servicio de verificacion por correo
 	 */
 	public AuthController(AuthenticationManager authenticationManager,
-			JwtUtil jwtUtil, UserService userService) {
+			JwtUtil jwtUtil, UserService userService,
+			EmailAuthService emailAuthService) {
 		this.authenticationManager = authenticationManager;
 		this.jwtUtil = jwtUtil;
 		this.userService = userService;
+		this.emailAuthService = emailAuthService;
 	}
 
 	/**
@@ -166,16 +175,120 @@ public class AuthController {
 		registerRequest.setRole(User.Role.USER);
 
 		int result = userService.create(registerRequest);
+		if (result != 0) {
+			return switch (result) {
+				case 1 -> ResponseEntity.status(HttpStatus.CONFLICT)
+						.body("El nombre de usuario ya existe");
+				case 2 -> ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+						.body("El correo electronico ya esta en uso");
+				default -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body("Error al registrar el usuario");
+			};
+		}
+
+		int envio = emailAuthService.enviarCodigoRegistro(registerRequest.getEmail());
+		if (envio == 2) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("Usuario creado pero no se pudo enviar el correo de verificacion.");
+		}
+		return ResponseEntity.status(HttpStatus.CREATED)
+				.body("Usuario registrado. Revisa tu correo para verificar tu cuenta.");
+	}
+
+	/**
+	 * Verifica el codigo de registro enviado al correo del usuario.
+	 * Si es correcto y no ha expirado, activa la cuenta.
+	 *
+	 * @param dto DTO con email y codigo
+	 * @return 200 si la cuenta fue activada, 400/404/410 segun el error
+	 */
+	@Operation(
+			summary = "Verificar cuenta por correo",
+			description = "Valida el codigo de 6 digitos enviado al correo al registrarse. "
+					+ "Si es correcto activa la cuenta.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Cuenta verificada exitosamente"),
+			@ApiResponse(responseCode = "404", description = "Usuario no encontrado"),
+			@ApiResponse(responseCode = "400", description = "Codigo incorrecto"),
+			@ApiResponse(responseCode = "410", description = "Codigo expirado")
+	})
+	@PostMapping("/verificar-registro")
+	public ResponseEntity<?> verificarRegistro(
+			@RequestBody VerificacionDTO dto) {
+
+		int result = emailAuthService.verificarRegistro(dto.getEmail(), dto.getCodigo());
 		return switch (result) {
-			case 0 -> ResponseEntity.status(HttpStatus.CREATED)
-					.body("Usuario registrado exitosamente");
-			case 1 -> ResponseEntity.status(HttpStatus.CONFLICT)
-					.body("El nombre de usuario ya existe");
-			case 2 -> ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
-					.body("El correo electrónico ya está en uso");
-			default -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
-					.body("Error al registrar el usuario");
+			case 0 -> ResponseEntity.ok("Cuenta verificada. Ya puedes iniciar sesion.");
+			case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("Usuario no encontrado.");
+			case 2 -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body("Codigo incorrecto.");
+			default -> ResponseEntity.status(HttpStatus.GONE)
+					.body("El codigo ha expirado. Solicita uno nuevo.");
+		};
+	}
+
+	/**
+	 * Solicita el envio de un codigo de restablecimiento de contrasena al correo.
+	 *
+	 * @param dto DTO con el email del usuario
+	 * @return 200 si el correo fue enviado, 404 si el usuario no existe
+	 */
+	@Operation(
+			summary = "Solicitar reset de contrasena",
+			description = "Envia un codigo de 6 digitos al correo del usuario "
+					+ "para restablecer su contrasena.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Codigo enviado al correo"),
+			@ApiResponse(responseCode = "404", description = "Usuario no encontrado"),
+			@ApiResponse(responseCode = "500", description = "Error al enviar el correo")
+	})
+	@PostMapping("/solicitar-reset")
+	public ResponseEntity<?> solicitarReset(
+			@RequestBody VerificacionDTO dto) {
+
+		int result = emailAuthService.solicitarReset(dto.getEmail());
+		return switch (result) {
+			case 0 -> ResponseEntity.ok("Codigo de restablecimiento enviado a tu correo.");
+			case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("No existe una cuenta con ese correo.");
+			default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("No se pudo enviar el correo. Intenta de nuevo.");
+		};
+	}
+
+	/**
+	 * Confirma el restablecimiento de contrasena con el codigo recibido por correo.
+	 *
+	 * @param dto DTO con email, codigo y nueva contrasena
+	 * @return 200 si la contrasena fue actualizada, error segun el caso
+	 */
+	@Operation(
+			summary = "Confirmar reset de contrasena",
+			description = "Valida el codigo y actualiza la contrasena del usuario. "
+					+ "Requiere email, codigo y nuevaPassword.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Contrasena actualizada correctamente"),
+			@ApiResponse(responseCode = "404", description = "Usuario no encontrado"),
+			@ApiResponse(responseCode = "400", description = "Codigo incorrecto"),
+			@ApiResponse(responseCode = "410", description = "Codigo expirado")
+	})
+	@PostMapping("/confirmar-reset")
+	public ResponseEntity<?> confirmarReset(
+			@RequestBody ResetPasswordDTO dto) {
+
+		int result = emailAuthService.confirmarReset(
+				dto.getEmail(), dto.getCodigo(), dto.getNuevaPassword());
+		return switch (result) {
+			case 0 -> ResponseEntity.ok("Contrasena actualizada correctamente.");
+			case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("Usuario no encontrado.");
+			case 2 -> ResponseEntity.status(HttpStatus.BAD_REQUEST)
+					.body("Codigo incorrecto.");
+			default -> ResponseEntity.status(HttpStatus.GONE)
+					.body("El codigo ha expirado. Solicita uno nuevo.");
 		};
 	}
 
 }
+
