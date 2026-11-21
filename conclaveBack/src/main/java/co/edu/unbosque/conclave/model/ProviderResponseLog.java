@@ -5,6 +5,8 @@ import java.util.Objects;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,37 +14,38 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 
 /**
- * Entidad que registra la respuesta de OpenRouter para un {@link PromptHistory} específico.
+ * Entidad que registra la respuesta de un proveedor de IA para un
+ * {@link PromptHistory} especifico.
  *
- * <p>Con un único proveedor, la relación es 1:1 con {@link PromptHistory}.
- * Los bytes de contenido multimedia <strong>nunca</strong> se persisten aquí;
- * solo se almacenan metadatos (estado, modelo, duración, texto o error).</p>
+ * 
+ * La relacion es 1:1 con {@link PromptHistory}. Los bytes de contenido
+ * multimedia nunca se persisten aqui; solo se almacenan
+ * metadatos (estado, modelo, duracion y error si aplica).
+ * 
  */
 @Entity
 @Table(name = "provider_response_logs")
-public class ProviderResponseLog implements Serializable{
+public class ProviderResponseLog implements Serializable {
 
-	/** Número de versión para la serialización. */
+	/** Numero de version para la serializacion. */
 	private static final long serialVersionUID = 1L;
 
-	/** Identificador único del log. */
+	/** Identificador unico del log. */
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 
-	/** Registro de historial al que pertenece este log (relación 1:1). */
+	/** Registro de historial al que pertenece este log (relacion 1:1). */
 	@OneToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "history_id", nullable = false, unique = true)
 	private PromptHistory history;
 
-	/** Proveedor de IA — siempre {@link AIProvider#OPENROUTER}. */
+	/** Proveedor de IA que genero la respuesta. */
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
-	private AIProvider provider = AIProvider.OPENROUTER;
+	private AIProvider provider;
 
 	/** Nombre del modelo concreto utilizado. */
 	@Column(length = 100)
@@ -53,7 +56,7 @@ public class ProviderResponseLog implements Serializable{
 	@Column(nullable = false, length = 15)
 	private ResponseStatus status;
 
-	/** Código HTTP devuelto por OpenRouter. */
+	/** Codigo HTTP devuelto por el proveedor. */
 	@Column(nullable = false)
 	private int httpStatus;
 
@@ -61,7 +64,7 @@ public class ProviderResponseLog implements Serializable{
 	@Column(columnDefinition = "TEXT")
 	private String errorMessage;
 
-	/** Duración total de la llamada a OpenRouter en milisegundos. */
+	/** Duracion total de la llamada al proveedor en milisegundos. */
 	@Column(nullable = false)
 	private long durationMs;
 
@@ -73,18 +76,18 @@ public class ProviderResponseLog implements Serializable{
 	 * Constructor completo.
 	 *
 	 * @param history      historial al que pertenece este log
+	 * @param provider     proveedor de IA que genero la respuesta
 	 * @param model        nombre del modelo usado
 	 * @param status       estado de la respuesta
-	 * @param httpStatus   código HTTP de OpenRouter
-	 * @param textContent  texto generado (puede ser {@code null})
+	 * @param httpStatus   codigo HTTP del proveedor
 	 * @param errorMessage mensaje de error (puede ser {@code null})
-	 * @param durationMs   duración de la llamada en ms
+	 * @param durationMs   duracion de la llamada en ms
 	 */
-	public ProviderResponseLog(PromptHistory history, String model,
-			ResponseStatus status, int httpStatus,
-			String textContent, String errorMessage, long durationMs) {
+	public ProviderResponseLog(PromptHistory history, AIProvider provider, String model, ResponseStatus status,
+			int httpStatus, String errorMessage, long durationMs) {
 		this();
 		this.history = history;
+		this.provider = provider;
 		this.model = model;
 		this.status = status;
 		this.httpStatus = httpStatus;
@@ -92,70 +95,89 @@ public class ProviderResponseLog implements Serializable{
 		this.durationMs = durationMs;
 	}
 
+	/** @return identificador unico del log */
 	public Long getId() {
 		return id;
 	}
 
+	/** @param id identificador a establecer */
 	public void setId(Long id) {
 		this.id = id;
 	}
 
+	/** @return historial asociado */
 	public PromptHistory getHistory() {
 		return history;
 	}
 
+	/** @param history historial a establecer */
 	public void setHistory(PromptHistory history) {
 		this.history = history;
 	}
 
+	/** @return proveedor de IA */
 	public AIProvider getProvider() {
 		return provider;
 	}
 
+	/** @param provider proveedor a establecer */
 	public void setProvider(AIProvider provider) {
 		this.provider = provider;
 	}
 
+	/** @return nombre del modelo utilizado */
 	public String getModel() {
 		return model;
 	}
 
+	/** @param model modelo a establecer */
 	public void setModel(String model) {
 		this.model = model;
 	}
 
+	/** @return estado de la respuesta */
 	public ResponseStatus getStatus() {
 		return status;
 	}
 
+	/** @param status estado a establecer */
 	public void setStatus(ResponseStatus status) {
 		this.status = status;
 	}
 
+	/** @return codigo HTTP devuelto por el proveedor */
 	public int getHttpStatus() {
 		return httpStatus;
 	}
 
+	/** @param httpStatus codigo HTTP a establecer */
 	public void setHttpStatus(int httpStatus) {
 		this.httpStatus = httpStatus;
 	}
 
+	/** @return mensaje de error o {@code null} si no hubo error */
 	public String getErrorMessage() {
 		return errorMessage;
 	}
 
+	/** @param errorMessage mensaje de error a establecer */
 	public void setErrorMessage(String errorMessage) {
 		this.errorMessage = errorMessage;
 	}
 
+	/** @return duracion de la llamada en milisegundos */
 	public long getDurationMs() {
 		return durationMs;
 	}
 
+	/** @param durationMs duracion a establecer */
 	public void setDurationMs(long durationMs) {
 		this.durationMs = durationMs;
 	}
 
+	/**
+	 * @return numero de version para la serializacion
+	 */
 	public static long getSerialversionuid() {
 		return serialVersionUID;
 	}
@@ -187,6 +209,4 @@ public class ProviderResponseLog implements Serializable{
 				+ ", status=" + status + ", httpStatus=" + httpStatus + ", errorMessage=" + errorMessage
 				+ ", durationMs=" + durationMs + "]";
 	}
-	
-	
 }
