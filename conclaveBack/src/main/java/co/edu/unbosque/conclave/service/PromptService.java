@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,14 +34,88 @@ import co.edu.unbosque.conclave.model.ResponseStatus;
 
 /**
  * Coordina la generación de imágenes, audio y video mediante proveedores externos.
+ * Los videos se generan con modelos alojados en Spaces de Hugging Face.
  */
 @Service
 public class PromptService {
     private static final Logger LOGGER = Logger.getLogger(PromptService.class.getName());
     private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
-    private static final String AGNES_BASE = "https://apihub.agnes-ai.com";
-    private static final long VIDEO_TIMEOUT_MS = TimeUnit.MINUTES.toMillis(10);
-    private static final long POLL_MS = TimeUnit.SECONDS.toMillis(5);
+
+    /**
+     * Configuración de un Space de Hugging Face usado para generar video a partir de texto.
+     *
+     * @param space identificador del Space con el formato {@code organizacion/nombre}
+     * @param apiName nombre del endpoint de Gradio, sin la barra inicial
+     * @param data función que construye los parámetros del endpoint a partir del prompt
+     */
+    private record HfSpace(String space, String apiName, Function<String, JsonArray> data) {}
+
+    /**
+     * Modelos de texto a video de Hugging Face disponibles. Cada proveedor usa su propia API key.
+     */
+    private static final Map<AIProvider, HfSpace> HF_SPACES = Map.of(
+            AIProvider.HF_MINIMAX_H3, new HfSpace(
+                    "hugging-apps/minimax-h3-flashgen-4step",
+                    "generate",
+                    prompt -> {
+                        JsonArray data = new JsonArray();
+                        data.add(prompt);
+                        data.add(JsonNull.INSTANCE);
+                        data.add(JsonNull.INSTANCE);
+                        data.add("960x544 \u00B7 16:9 fast");
+                        data.add(5);
+                        data.add(42);
+                        data.add(false);
+                        return data;
+                    }),
+            AIProvider.HF_MINIMAX_TURBO, new HfSpace(
+                    "wank3r/minimax-h3",
+                    "generate",
+                    prompt -> {
+                        JsonArray data = new JsonArray();
+                        data.add(prompt);
+                        data.add(JsonNull.INSTANCE);
+                        data.add(JsonNull.INSTANCE);
+                        data.add("960x544 \u00B7 16:9 fast");
+                        data.add(5);
+                        data.add(7);
+                        data.add(-1);
+                        data.add(false);
+                        data.add(true);
+                        data.add(new JsonArray());
+                        data.add("");
+                        data.add(1.0);
+                        data.add("");
+                        return data;
+                    }),
+            AIProvider.HF_OMNI_VIDEO, new HfSpace(
+                    "CumaSystem/Omni-videos-custom",
+                    "_submit_t2v",
+                    prompt -> {
+                        JsonArray data = new JsonArray();
+                        data.add("1");
+                        data.add("3");
+                        data.add("384");
+                        data.add("16:9");
+                        data.add(prompt);
+                        data.add(prompt);
+                        data.add("");
+                        data.add("");
+                        data.add("");
+                        return data;
+                    }),
+            AIProvider.HF_MODELSCOPE, new HfSpace(
+                    "mediasynthesismuseum/modelscope-text-to-video",
+                    "generate_1",
+                    prompt -> {
+                        JsonArray data = new JsonArray();
+                        data.add(prompt);
+                        data.add(-1);
+                        data.add(24);
+                        data.add(25);
+                        return data;
+                    })
+    );
 
     @Autowired private ExternalHTTPRequestHandler externalHandler;
     @Autowired private ApiKeyService apiKeyService;
@@ -420,331 +494,71 @@ public class PromptService {
         } catch (Exception e) { return failed(dto, "No se pudo interpretar la respuesta de audio: " + e.getMessage()); }
     }
 
-    /** Selecciona el proveedor y delega la generación de video.
+    /**
+     * Selecciona el modelo de texto a video de Hugging Face y delega la generación.
+     * Si no se indica un modelo, se usa {@link AIProvider#HF_MINIMAX_H3}.
+     *
      * @param request parámetros de generación
-     * @return respuesta del proveedor seleccionado
+     * @return respuesta del modelo seleccionado
      */
     private AIResponseDTO generateVideo(PromptRequestDTO request) {
         String provider = request.getVideoProvider();
-        if (provider == null || provider.isBlank() || "AGNES_AI".equalsIgnoreCase(provider)) return generateAgnesVideo(request);
-        if ("KINOVI_AI".equalsIgnoreCase(provider)) return generateKinoviVideo(request);
-        if ("FAL_AI".equalsIgnoreCase(provider)) return generateFalVideo(request);
-        if ("REPLICATE".equalsIgnoreCase(provider)) return generateReplicateVideo(request);
-        if ("HUGGINGFACE".equalsIgnoreCase(provider)) return generateHuggingFaceVideo(request);
-        return failed(base(AIProvider.AGNES_AI, "video-provider", 400, System.currentTimeMillis()), "Proveedor de video no válido: " + provider);
-    }
-
-    /** Genera un video mediante Agnes AI.
-     * @param request parámetros de generación
-     * @return respuesta de Agnes AI
-     */
-    private AIResponseDTO generateAgnesVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis();
-        String model = "agnes-video-2.5-flash";
-        String apiKey;
-        try {
-            apiKey = key(AIProvider.AGNES_AI);
-        } catch (Exception e) {
-            return failed(base(AIProvider.AGNES_AI, model, 400, start),
-                    "Configura la API Key de Agnes AI en Swagger: /admin/apikey/update/AGNES_AI.");
+        AIProvider hfProvider = provider == null || provider.isBlank() ? AIProvider.HF_MINIMAX_H3 : hfProvider(provider);
+        if (hfProvider == null) {
+            return failed(base(AIProvider.HF_MINIMAX_H3, "video-provider", 400, System.currentTimeMillis()),
+                    "Modelo de video no válido: " + provider);
         }
-        try {
-            JsonObject payload = new JsonObject();
-            payload.addProperty("model", model);
-            payload.addProperty("prompt", request.getPromptText());
-            payload.addProperty("mode", "text");
-            payload.addProperty("seconds", "5");
-            payload.addProperty("size", "720P");
-            payload.addProperty("aspect_ratio", "16:9");
-            HttpResponse<String> create = post(
-                    AGNES_BASE + "/v1/videos",
-                    Map.of("Authorization", "Bearer " + apiKey, "Content-Type", "application/json"),
-                    payload.toString());
-            AIResponseDTO dto = base(AIProvider.AGNES_AI, model, create.statusCode(), start);
-            if (!ok(create)) {
-                return failed(dto, "Agnes AI: " + error(create));
-            }
-            JsonObject created = JsonParser.parseString(create.body()).getAsJsonObject();
-            String videoId = firstString(created, "video_id", "id", "task_id");
-            if (videoId == null) return failed(dto, "Agnes AI no devolvió video_id: " + create.body());
-            return pollAgnesVideo(videoId, model, apiKey, dto, start, System.currentTimeMillis() + VIDEO_TIMEOUT_MS);
-        } catch (Exception e) { LOGGER.log(Level.WARNING, "Agnes AI video generation failed", e); return failed(base(AIProvider.AGNES_AI, model, 500, start), "Error Agnes AI: " + e.getMessage()); }
-    }
-
-    /** Genera un video mediante Kinovi AI.
-     * @param request parámetros de generación
-     * @return respuesta de Kinovi AI
-     */
-    private AIResponseDTO generateKinoviVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis();
-        String model = modelOr(request.getVideoModel(), "seedance2-5");
-        String apiKey;
-        try {
-            apiKey = key(AIProvider.KINOVI_AI);
-        } catch (Exception e) {
-            return failed(base(AIProvider.KINOVI_AI, model, 400, start),
-                    "Configura KINOVI_AI en Swagger (/admin/apikey/update/KINOVI_AI).");
-        }
-        try {
-            JsonObject inputs = new JsonObject();
-            inputs.addProperty("prompt", request.getPromptText());
-            inputs.addProperty("duration", 5);
-            inputs.addProperty("outputResolution", "720p");
-            JsonObject body = new JsonObject();
-            body.addProperty("model", model);
-            body.add("inputs", inputs);
-            HttpResponse<String> created = post(
-                    "https://kinovi.ai/api/v1/jobs/createTask",
-                    Map.of("Authorization", "Bearer " + apiKey, "Content-Type", "application/json"),
-                    body.toString());
-            AIResponseDTO dto = base(AIProvider.KINOVI_AI, model, created.statusCode(), start);
-            if (!ok(created)) return failed(dto, "Kinovi: " + error(created));
-            JsonObject responseBody = JsonParser.parseString(created.body()).getAsJsonObject();
-            String taskId = stringValue(responseBody, "taskId");
-            if (taskId == null) return failed(dto, "Kinovi no devolvió taskId: " + created.body());
-            return pollKinovi(taskId, model, apiKey, dto, start, System.currentTimeMillis() + VIDEO_TIMEOUT_MS);
-        } catch (Exception e) { return failed(base(AIProvider.KINOVI_AI, model, 500, start), "Error Kinovi: " + e.getMessage()); }
-    }
-
-    /** Consulta el estado de una tarea de video de Kinovi hasta finalizar o agotar el tiempo límite. */
-    private AIResponseDTO pollKinovi(String taskId, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) {
-            return failed(dto, "Kinovi excedió el tiempo máximo de generación.");
-        }
-
-        HttpResponse<String> response = get(
-                "https://kinovi.ai/api/v1/jobs/recordInfo?taskId=" + enc(taskId),
-                Map.of("Authorization", "Bearer " + apiKey));
-        if (!ok(response)) {
-            return failed(dto, "Kinovi: " + error(response));
-        }
-
-        JsonObject info = JsonParser.parseString(response.body()).getAsJsonObject();
-        String status = stringValue(info, "status");
-        if ("success".equalsIgnoreCase(status)) {
-            String url = outputUrl(info);
-            if (url == null) {
-                return failed(dto, "Kinovi terminó sin URL de video: " + response.body());
-            }
-            return successVideo(dto, url, start);
-        }
-        if ("fail".equalsIgnoreCase(status)) {
-            String message = firstString(info, "message", "error");
-            return failed(dto, message == null ? "Kinovi falló: " + response.body() : message);
-        }
-
-        Thread.sleep(POLL_MS);
-        return pollKinovi(taskId, model, apiKey, dto, start, deadline);
-    }
-
-    /** Envía una solicitud de generación de video a fal.ai y procesa su tarea asíncrona. */
-    private AIResponseDTO generateFalVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis();
-        String model = modelOr(request.getVideoModel(), "fal-ai/wan/v2.1/1.3b/text-to-video");
-        String apiKey;
-        try {
-            apiKey = key(AIProvider.FAL_AI);
-        } catch (Exception e) {
-            return failed(base(AIProvider.FAL_AI, model, 400, start),
-                    "Configura FAL_AI en Swagger (/admin/apikey/update/FAL_AI).");
-        }
-
-        try {
-            JsonObject body = new JsonObject();
-            body.addProperty("prompt", request.getPromptText());
-            HttpResponse<String> submit = post(
-                    "https://queue.fal.run/" + model,
-                    Map.of("Authorization", "Key " + apiKey, "Content-Type", "application/json"),
-                    body.toString());
-            AIResponseDTO dto = base(AIProvider.FAL_AI, model, submit.statusCode(), start);
-            if (!ok(submit)) {
-                return failed(dto, "fal.ai: " + error(submit));
-            }
-
-            JsonObject json = JsonParser.parseString(submit.body()).getAsJsonObject();
-            String requestId = stringValue(json, "request_id");
-            String statusUrl = stringValue(json, "status_url");
-            String resultUrl = stringValue(json, "response_url");
-            if (requestId == null || statusUrl == null || resultUrl == null) {
-                return failed(dto, "fal.ai no devolvió request_id/status_url/response_url: " + submit.body());
-            }
-            long deadline = System.currentTimeMillis() + VIDEO_TIMEOUT_MS;
-            return pollFal(requestId, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
-        } catch (Exception e) {
-            return failed(base(AIProvider.FAL_AI, model, 500, start), "Error fal.ai: " + e.getMessage());
-        }
-    }
-
-    /** Consulta el estado de una tarea de fal.ai y obtiene el resultado cuando termina. */
-    private AIResponseDTO pollFal(String id, String statusUrl, String resultUrl, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) {
-            return failed(dto, "fal.ai excedió el tiempo máximo de generación.");
-        }
-
-        HttpResponse<String> status = get(statusUrl, Map.of("Authorization", "Key " + apiKey));
-        if (!ok(status)) {
-            return failed(dto, "fal.ai status: " + error(status));
-        }
-
-        JsonObject stat = JsonParser.parseString(status.body()).getAsJsonObject();
-        String state = stringValue(stat, "status");
-        if ("COMPLETED".equalsIgnoreCase(state)) {
-            HttpResponse<String> result = get(resultUrl, Map.of("Authorization", "Key " + apiKey));
-            if (!ok(result)) {
-                return failed(dto, "fal.ai result: " + error(result));
-            }
-            String url = outputUrl(JsonParser.parseString(result.body()).getAsJsonObject());
-            if (url == null) {
-                return failed(dto, "fal.ai no devolvió URL de video: " + result.body());
-            }
-            return successVideo(dto, url, start);
-        }
-        if ("FAILED".equalsIgnoreCase(state)) {
-            return failed(dto, "fal.ai falló: " + status.body());
-        }
-
-        Thread.sleep(POLL_MS);
-        return pollFal(id, statusUrl, resultUrl, model, apiKey, dto, start, deadline);
-    }
-
-    /** Genera un video mediante el endpoint de predicciones de Replicate.
-     * @param request parámetros de generación
-     * @return respuesta de Replicate
-     */
-    private AIResponseDTO generateReplicateVideo(PromptRequestDTO request) {
-        long start = System.currentTimeMillis();
-        String model = modelOr(request.getVideoModel(), "minimax/video-01");
-        String apiKey;
-
-        try {
-            apiKey = key(AIProvider.REPLICATE);
-        } catch (Exception e) {
-            return failed(base(AIProvider.REPLICATE, model, 400, start),
-                    "Configura REPLICATE en Swagger (/admin/apikey/update/REPLICATE).");
-        }
-
-        try {
-            JsonObject input = new JsonObject();
-            input.addProperty("prompt", request.getPromptText());
-
-            JsonObject body = new JsonObject();
-            body.add("input", input);
-
-            HttpResponse<String> created = post(
-                    "https://api.replicate.com/v1/models/" + model + "/predictions",
-                    Map.of(
-                            "Authorization", "Bearer " + apiKey,
-                            "Content-Type", "application/json",
-                            "Prefer", "wait"),
-                    body.toString());
-
-            AIResponseDTO dto = base(AIProvider.REPLICATE, model, created.statusCode(), start);
-            if (!ok(created)) {
-                return failed(dto, "Replicate: " + error(created));
-            }
-
-            JsonObject prediction = JsonParser.parseString(created.body()).getAsJsonObject();
-            String id = stringValue(prediction, "id");
-            String pollUrl = prediction.has("urls") && prediction.get("urls").isJsonObject()
-                    ? stringValue(prediction.getAsJsonObject("urls"), "get")
-                    : null;
-
-            String url = outputUrl(prediction);
-            String state = stringValue(prediction, "status");
-            if (url != null && List.of("succeeded", "success").contains(state)) {
-                return successVideo(dto, url, start);
-            }
-
-            if (pollUrl == null && id != null) {
-                pollUrl = "https://api.replicate.com/v1/predictions/" + id;
-            }
-            if (pollUrl == null) {
-                return failed(dto, "Replicate no devolvió URL de consulta: " + created.body());
-            }
-
-            return pollReplicate(pollUrl, model, apiKey, dto, start,
-                    System.currentTimeMillis() + VIDEO_TIMEOUT_MS);
-        } catch (Exception e) {
-            return failed(base(AIProvider.REPLICATE, model, 500, start),
-                    "Error Replicate: " + e.getMessage());
-        }
+        return generateSpaceVideo(hfProvider, HF_SPACES.get(hfProvider), request.getPromptText());
     }
 
     /**
-     * Consulta periódicamente el estado de una predicción de Replicate hasta que finaliza
-     * o se alcanza el tiempo máximo de espera.
+     * Obtiene el proveedor de Hugging Face asociado al identificador recibido.
+     *
+     * @param provider identificador del proveedor enviado por el cliente
+     * @return proveedor configurado o {@code null} si no corresponde a un modelo de Hugging Face
      */
-    private AIResponseDTO pollReplicate(String url, String model, String apiKey,
-            AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) {
-            return failed(dto, "Replicate excedió el tiempo máximo de generación.");
+    private AIProvider hfProvider(String provider) {
+        try {
+            AIProvider value = AIProvider.valueOf(provider.trim().toUpperCase());
+            return HF_SPACES.containsKey(value) ? value : null;
+        } catch (IllegalArgumentException e) {
+            return null;
         }
-
-        HttpResponse<String> response = get(url, Map.of("Authorization", "Bearer " + apiKey));
-        if (!ok(response)) {
-            return failed(dto, "Replicate: " + error(response));
-        }
-
-        JsonObject json = JsonParser.parseString(response.body()).getAsJsonObject();
-        String status = stringValue(json, "status");
-
-        if ("succeeded".equalsIgnoreCase(status)) {
-            String video = outputUrl(json);
-            if (video == null) {
-                return failed(dto, "Replicate terminó sin URL de video: " + response.body());
-            }
-            return successVideo(dto, video, start);
-        }
-
-        if (List.of("failed", "canceled").contains(status)) {
-            String error = firstString(json, "error");
-            return failed(dto, error == null
-                    ? "Replicate falló: " + response.body()
-                    : error);
-        }
-
-        Thread.sleep(POLL_MS);
-        return pollReplicate(url, model, apiKey, dto, start, deadline);
     }
 
     /**
      * Genera un video mediante un Space de Hugging Face basado en Gradio.
-     * Envía la tarea al endpoint {@code /generate} del Space y espera su resultado.
+     * Envía la tarea al endpoint configurado del Space y espera su resultado.
      *
-     * @param request parámetros de generación
+     * @param provider proveedor cuya API key se usará para autenticar la solicitud
+     * @param config configuración del Space
+     * @param prompt texto que describe el video
      * @return respuesta con la URL del video generado o el detalle del error
      */
-    private AIResponseDTO generateHuggingFaceVideo(PromptRequestDTO request) {
+    private AIResponseDTO generateSpaceVideo(AIProvider provider, HfSpace config, String prompt) {
         long start = System.currentTimeMillis();
-        String space = modelOr(request.getVideoModel(), "hugging-apps/minimax-h3-flashgen-4step");
+        String space = config.space();
         String token;
         try {
-            token = key(AIProvider.HUGGINGFACE);
+            token = key(provider);
         } catch (Exception e) {
-            return failed(base(AIProvider.HUGGINGFACE, space, 400, start),
-                    "Configura HUGGINGFACE en Swagger (/admin/apikey/update/HUGGINGFACE).");
+            return failed(base(provider, space, 400, start),
+                    "Configura la API key de " + provider.getDisplayName()
+                    + " en el panel de administración o en Swagger (/admin/apikey/update/" + provider + ").");
         }
         try {
             String host = "https://" + space.toLowerCase().replace("/", "-").replace("_", "-").replace(".", "-") + ".hf.space";
-            String endpoint = host + "/gradio_api/call/generate";
+            String endpoint = host + "/gradio_api/call/" + config.apiName();
 
-            JsonArray data = new JsonArray();
-            data.add(request.getPromptText());
-            data.add(JsonNull.INSTANCE);
-            data.add(JsonNull.INSTANCE);
-            data.add("960x544 \u00B7 16:9 fast");
-            data.add(5);
-            data.add(42);
-            data.add(false);
             JsonObject body = new JsonObject();
-            body.add("data", data);
+            body.add("data", config.data().apply(prompt));
 
             Map<String, String> headers = Map.of(
                     "Authorization", "Bearer " + token,
                     "Content-Type", "application/json");
 
             HttpResponse<String> submit = post(endpoint, headers, body.toString());
-            AIResponseDTO dto = base(AIProvider.HUGGINGFACE, space, submit.statusCode(), start);
+            AIResponseDTO dto = base(provider, space, submit.statusCode(), start);
             if (!ok(submit)) {
                 LOGGER.warning("Hugging Face submit falló: HTTP " + submit.statusCode() + " " + submit.body());
                 return failed(dto, "Hugging Face: " + error(submit));
@@ -757,7 +571,7 @@ public class PromptService {
             return parseGradioStream(result.body(), dto, start);
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Hugging Face video generation failed", e);
-            return failed(base(AIProvider.HUGGINGFACE, space, 500, start), "Error Hugging Face: " + e.getMessage());
+            return failed(base(provider, space, 500, start), "Error Hugging Face: " + e.getMessage());
         }
     }
 
@@ -816,48 +630,6 @@ public class PromptService {
     }
 
     /**
-     * Devuelve el valor recibido o el valor alternativo cuando el primero es nulo o está vacío.
-     */
-    private String modelOr(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value.trim();
-    }
-
-    /**
-     * Extrae la URL del video de las estructuras de respuesta admitidas por los proveedores.
-     */
-    private String outputUrl(JsonObject json) {
-        String direct = firstString(json, "video_url", "url", "download_url");
-        if (direct != null) {
-            return direct;
-        }
-
-        if (json.has("video") && json.get("video").isJsonObject()) {
-            return firstString(json.getAsJsonObject("video"), "url");
-        }
-
-        if (json.has("output") && json.get("output").isJsonArray()
-                && json.getAsJsonArray("output").size() > 0) {
-            var item = json.getAsJsonArray("output").get(0);
-            if (item.isJsonPrimitive()) {
-                return item.getAsString();
-            }
-            if (item.isJsonObject()) {
-                return firstString(item.getAsJsonObject(), "url");
-            }
-        }
-
-        if (json.has("output") && json.get("output").isJsonPrimitive()) {
-            return json.get("output").getAsString();
-        }
-
-        if (json.has("data") && json.get("data").isJsonObject()) {
-            return outputUrl(json.getAsJsonObject("data"));
-        }
-
-        return null;
-    }
-
-    /**
      * Marca la respuesta como exitosa y establece los datos de descarga del video generado.
      */
     private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start) {
@@ -867,94 +639,6 @@ public class PromptService {
         dto.setFormat(MediaFormat.MP4);
         dto.setDurationMs(System.currentTimeMillis() - start);
         return dto;
-    }
-
-    /**
-     * Consulta el estado de la generación de Agnes AI hasta que finaliza o se agota el plazo.
-     *
-     * @param videoId identificador de la tarea de video
-     * @param model modelo utilizado para generar el video
-     * @param apiKey clave de autenticación del proveedor
-     * @param dto respuesta que se actualizará con el resultado
-     * @param start instante en que inició la generación
-     * @param deadline instante límite para completar la consulta
-     * @return respuesta con el video generado o con el detalle del fallo
-     * @throws Exception si ocurre un error durante la consulta o espera
-     */
-    private AIResponseDTO pollAgnesVideo(String videoId, String model, String apiKey, AIResponseDTO dto, long start, long deadline) throws Exception {
-        if (System.currentTimeMillis() > deadline) {
-            return failed(dto, "Agnes AI excedió el tiempo máximo de generación de video.");
-        }
-
-        String url = AGNES_BASE + "/agnesapi?video_id=" + enc(videoId) + "&model_name=" + enc(model);
-        HttpResponse<String> response = get(url, Map.of("Authorization", "Bearer " + apiKey));
-        if (!ok(response)) {
-            return failed(dto, "Error consultando Agnes AI: " + error(response));
-        }
-
-        JsonObject result = JsonParser.parseString(response.body()).getAsJsonObject();
-        String status = agnesStatus(result);
-        if (status == null) {
-            return failed(dto, "Agnes AI devolvió una respuesta sin estado: " + response.body());
-        }
-        if (isAgnesCompleted(status)) {
-            return completeAgnesVideo(result, dto, start, response.body());
-        }
-        if (isAgnesFailed(status)) {
-            return failed(dto, agnesError(result, response.body()));
-        }
-
-        Thread.sleep(POLL_MS);
-        return pollAgnesVideo(videoId, model, apiKey, dto, start, deadline);
-    }
-
-    /** Obtiene el estado de Agnes AI desde la respuesta principal o su objeto data. */
-    private String agnesStatus(JsonObject result) {
-        String status = stringValue(result, "status");
-        if (status == null && result.has("data") && result.get("data").isJsonObject()) {
-            status = stringValue(result.getAsJsonObject("data"), "status");
-        }
-        return status == null ? null : status.toLowerCase();
-    }
-
-    /** Indica si Agnes AI reportó que la generación terminó correctamente. */
-    private boolean isAgnesCompleted(String status) {
-        return List.of("completed", "complete", "success", "succeeded", "done").contains(status);
-    }
-
-    /** Indica si Agnes AI reportó un estado de generación fallido. */
-    private boolean isAgnesFailed(String status) {
-        return List.of("failed", "failure", "error", "cancelled", "canceled").contains(status);
-    }
-
-    /** Construye la respuesta exitosa a partir de la URL del video de Agnes AI. */
-    private AIResponseDTO completeAgnesVideo(JsonObject result, AIResponseDTO dto, long start, String responseBody) {
-        String videoUrl = agnesVideoUrl(result);
-        if (videoUrl == null || videoUrl.isBlank()) {
-            return failed(dto, "Agnes AI marcó el video como completado, pero no devolvió una URL. Respuesta: " + responseBody);
-        }
-        return successVideo(dto, videoUrl, start);
-    }
-
-    /** Busca la URL del video en los campos habituales de la respuesta de Agnes AI. */
-    private String agnesVideoUrl(JsonObject result) {
-        String videoUrl = firstString(result, "url", "video_url", "download_url");
-        if (videoUrl != null) {
-            return videoUrl;
-        }
-        if (result.has("result") && result.get("result").isJsonObject()) {
-            videoUrl = firstString(result.getAsJsonObject("result"), "url", "video_url", "download_url");
-        }
-        if (videoUrl == null && result.has("data") && result.get("data").isJsonObject()) {
-            videoUrl = firstString(result.getAsJsonObject("data"), "url", "video_url", "download_url");
-        }
-        return videoUrl;
-    }
-
-    /** Obtiene el mensaje de error de Agnes AI o utiliza el cuerpo de la respuesta. */
-    private String agnesError(JsonObject result, String responseBody) {
-        String message = firstString(result, "error", "message");
-        return message == null ? "Agnes AI falló la generación: " + responseBody : message;
     }
 
     /** Obtiene un campo como texto, o null si no existe o no puede convertirse. */
