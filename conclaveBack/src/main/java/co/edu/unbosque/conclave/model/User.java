@@ -78,6 +78,14 @@ public class User implements UserDetails  {
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
+	/** Codigo de verificacion temporal (registro o reset de contrasena). */
+	@Column(length = 6)
+	private String verificationCode;
+
+	/** Fecha y hora de expiracion del codigo de verificacion. */
+	@Column
+	private LocalDateTime verificationExpiry;
+
 	//Ciclo de vida 
 
 	/** Asigna la fecha de creación antes de persistir la entidad. No requiere anotación JPA adicional; se llama manualmente desde el servicio o se puede omitir si la BD gestiona el default. */
@@ -248,6 +256,18 @@ public class User implements UserDetails  {
 
 	/** @return fecha y hora de creación del usuario */
 	public LocalDateTime getCreatedAt() { return createdAt; }
+
+	/** @return codigo de verificacion temporal */
+	public String getVerificationCode() { return verificationCode; }
+
+	/** @param verificationCode codigo a establecer */
+	public void setVerificationCode(String verificationCode) { this.verificationCode = verificationCode; }
+
+	/** @return fecha de expiracion del codigo de verificacion */
+	public LocalDateTime getVerificationExpiry() { return verificationExpiry; }
+
+	/** @param verificationExpiry fecha de expiracion a establecer */
+	public void setVerificationExpiry(LocalDateTime verificationExpiry) { this.verificationExpiry = verificationExpiry; }
 
 	// hashCode, equals y el toString 
 	/**

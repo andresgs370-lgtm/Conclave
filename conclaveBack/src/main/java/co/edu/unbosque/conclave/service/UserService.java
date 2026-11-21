@@ -99,7 +99,7 @@ public class UserService implements CRUDOperation<UserDTO> {
 		entity.setFullName(data.getFullName());
 		entity.setRole(User.Role.USER);
 		entity.setPassword(passwordEncoder.encode(data.getPassword()));
-		entity.setEnabled(true);
+		entity.setEnabled(false);
 
 		userRepo.save(entity);
 		return 0;

@@ -28,7 +28,7 @@
           </div>
           <div class="note mb-4" [hidden]="!(imageProvider === 'CLOUDFLARE')">Cloudflare Workers AI: cuota gratuita diaria compartida entre modelos; puede agotarse.</div>
           <div class="note mb-4" [hidden]="!(imageProvider === 'GEMINI')">Gemini: disponibilidad y cuota dependen del modelo y del plan de tu proyecto de Google AI Studio.</div>
-          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' 🖼️ Generar imagen ' }}</button>
+          <button type="button" class="btn btn-primary btn-lg w-100" (click)="generate()" [disabled]="loading">{{ loading ? 'Generando...' : ' Generar imagen ' }}</button>
           <p class="text-danger mt-3" [hidden]="!(error)">{{ error }}</p>
         </div>
       </div>

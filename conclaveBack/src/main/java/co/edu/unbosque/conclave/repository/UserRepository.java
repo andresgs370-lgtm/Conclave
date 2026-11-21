@@ -28,6 +28,14 @@ public interface UserRepository extends JpaRepository<User, Long>{
 	public boolean existsByEmail(String email);
 
 	/**
+	 * Busca un usuario por su correo electronico.
+	 *
+	 * @param email correo electronico a buscar
+	 * @return {@code Optional} con el usuario si existe, vacio si no
+	 */
+	public Optional<User> findByEmail(String email);
+
+	/**
 	 * Elimina el usuario con el nombre de usuario indicado.
 	 *
 	 * @param username nombre de usuario del usuario a eliminar
