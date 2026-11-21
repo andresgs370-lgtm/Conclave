@@ -4,6 +4,7 @@ import co.edu.unbosque.conclave.model.PromptHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio JPA para la entidad {@link PromptHistory}.
@@ -32,4 +33,6 @@ public interface PromptHistoryRepository extends JpaRepository<PromptHistory, Lo
 	 * @return lista completa de historial
 	 */
 	public List<PromptHistory> findAllByOrderByCreatedAtDesc();
+	
+	Optional<PromptHistory> findByIdAndUserUsername(Long id, String username);
 }

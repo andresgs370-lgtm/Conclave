@@ -16,6 +16,7 @@
         <li class="nav-item"><a class="nav-link" routerLink="/video" routerLinkActive="active">Creacion Videos</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/imagen" routerLinkActive="active">Creacion de Imagenes</a></li>
         <li class="nav-item"><a class="nav-link" routerLink="/sonido" routerLinkActive="active">Creacion de Sonidos</a></li>
+        <li class="nav-item"><a class="nav-link" routerLink="/sonido" routerLinkActive="active">Mi Perfil</a></li>
         <li class="nav-item" *ngIf="auth.isAdmin$ | async"><a class="nav-link" routerLink="/administrar" routerLinkActive="active">Administrar</a></li>
         <ng-container *ngIf="auth.username$ | async as username; else guestLinks">
           <li class="nav-item ms-xxl-3 mt-2 mt-xxl-0"><a class="nav-link user-label" routerLink="/perfil">Hola, {{ username }} · Mi perfil</a></li>
