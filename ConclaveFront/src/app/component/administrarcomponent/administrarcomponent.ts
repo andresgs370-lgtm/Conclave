@@ -52,7 +52,7 @@ interface ProviderKey {
 export class Administrarcomponent implements OnInit {
 
   /** URL base del backend. */
-  private api = 'http://localhost:8080';
+  private api = 'https://gpcueb.org/conclave-0.0.1-SNAPSHOT';
 
   /** Encabezados de autenticación con el token de la sesión actual. */
   private get headers(): HttpHeaders {

@@ -53,7 +53,7 @@ export interface OpcionesGenerate {
 /** Servicio para comunicación HTTP con el backend de Conclave. */
 @Injectable({ providedIn: 'root' })
 export class Apiservice {
-  private readonly baseUrl = 'http://localhost:8080';
+  private readonly baseUrl = 'https://gpcueb.org/conclave-0.0.1-SNAPSHOT';
   private static readonly tokenStorageKey = 'conclave_token';
 
   constructor(private http: HttpClient) {}

@@ -32,6 +32,14 @@ import java.util.List;
  *   <li>CORS habilitado para los orígenes declarados en {@link #corsConfigurationSource()}.</li>
  *   <li>Peticiones sin token reciben HTTP 401 (no redirigen al login).</li>
  * </ul>
+ *
+ * <p>Reglas de acceso:</p>
+ * <ul>
+ *   <li>{@code /auth/**} y la documentación Swagger son públicas.</li>
+ *   <li>{@code /user/me}, {@code /prompt/**} y {@code /history/me} requieren rol USER o ADMIN.</li>
+ *   <li>{@code /user/**}, {@code /admin/**} y {@code /history/**} requieren rol ADMIN.</li>
+ *   <li>Cualquier otra ruta requiere autenticación.</li>
+ * </ul>
  */
 @Configuration
 @EnableWebSecurity
@@ -71,24 +79,16 @@ public class SecurityConfig {
 			.exceptionHandling(ex ->
 					ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 			.authorizeHttpRequests(auth -> auth
-					// Autenticación pública
 					.requestMatchers("/auth/**").permitAll()
-					// Documentación OpenAPI / Swagger
 					.requestMatchers(
 							"/", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"
 					).permitAll()
-					// Perfil propio: USER o ADMIN
 					.requestMatchers("/user/me").hasAnyRole("USER", "ADMIN")
-					// Gestión de usuarios: solo ADMIN
 					.requestMatchers("/user/**").hasRole("ADMIN")
-					// Gestión de API keys: solo ADMIN
 					.requestMatchers("/admin/**").hasRole("ADMIN")
-					// Prompts e historial propio: USER o ADMIN
 					.requestMatchers("/prompt/**", "/history/me", "/history/me/**")
 							.hasAnyRole("USER", "ADMIN")
-					// Historial global: solo ADMIN
 					.requestMatchers("/history/**").hasRole("ADMIN")
-					// Cualquier otra ruta requiere autenticación
 					.anyRequest().authenticated()
 			)
 			.sessionManagement(session ->
@@ -100,7 +100,8 @@ public class SecurityConfig {
 	}
 
 	/**
-	 * Configura CORS para los orígenes del frontend y la propia API.
+	 * Configura CORS para los orígenes locales de desarrollo y para el frontend
+	 * desplegado en Netlify. No usa credenciales porque la autenticación va por JWT.
 	 *
 	 * @return fuente de configuración CORS
 	 */
@@ -111,11 +112,11 @@ public class SecurityConfig {
 				"http://localhost:8080",
 				"http://localhost:8081",
 				"http://localhost:5173",
-				"http://localhost:4200"
+				"http://localhost:4200",
+				"https://conclaveia.netlify.app"
 		));
 		config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 		config.setAllowedHeaders(List.of("*"));
-		// Sin allowCredentials para no requerir cookies de sesión
 
 		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 		source.registerCorsConfiguration("/**", config);
