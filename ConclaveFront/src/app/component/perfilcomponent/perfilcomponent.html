@@ -6,25 +6,25 @@
       <h2>Datos de la cuenta</h2>
       <div class="profile-row">
         <span>Usuario</span>
-        <strong>{{ profile.username || 'No disponible' }}</strong>
+        <strong>{{ mostrarValor(profile.username, 'No disponible') }}</strong>
       </div>
       <div class="profile-row">
         <span>Correo electrónico</span>
-        <strong>{{ profile.email || 'No disponible' }}</strong>
+        <strong>{{ mostrarValor(profile.email, 'No disponible') }}</strong>
       </div>
       <div class="profile-row">
         <span>Nombre completo</span>
-        <strong>{{ profile.fullName || 'No disponible' }}</strong>
+        <strong>{{ mostrarValor(profile.fullName, 'No disponible') }}</strong>
       </div>
       <div class="profile-row">
         <span>Rol</span>
-        <strong>{{ profile.role || 'USER' }}</strong>
+        <strong>{{ mostrarValor(profile.role, 'USER') }}</strong>
       </div>
       <div class="profile-row">
         <span>Estado de la cuenta</span>
-        <strong>{{ profile.enabled === false ? 'Desactivada' : 'Activa' }}</strong>
+        <strong>{{ cuentaActiva() }}</strong>
       </div>
-      <p class="profile-error" *ngIf="profileError">{{ profileError }}</p>
+      <p class="profile-error" [hidden]="!profileError">{{ profileError }}</p>
     </div>
 
     <div class="history-section">
@@ -35,22 +35,22 @@
         </button>
       </div>
 
-      <p class="history-error" *ngIf="historyError">{{ historyError }}</p>
-      <p class="history-empty" *ngIf="history.length === 0 && !historyError">
+      <p class="history-error" [hidden]="!historyError">{{ historyError }}</p>
+      <p class="history-empty" [hidden]="!historialVacio()">
         Aún no has puesto prompts.
       </p>
 
-      <div class="history-list" *ngIf="history.length > 0">
+      <div class="history-list" [hidden]="!historialConRegistros()">
         <article class="history-item" *ngFor="let item of history">
           <div class="history-heading">
-            <strong>{{ item.model || 'IA no especificada' }}</strong>
-            <span>{{ item.createdAt ? (item.createdAt | date:'dd/MM/yyyy, HH:mm') : 'Fecha no disponible' }}</span>
+            <strong>{{ mostrarValor(item.model, 'IA no especificada') }}</strong>
+            <span>{{ mostrarFecha(item.createdAt) }}</span>
           </div>
-          <p class="history-prompt">{{ item.promptText || 'Prompt sin contenido' }}</p>
+          <p class="history-prompt">{{ mostrarValor(item.promptText, 'Prompt sin contenido') }}</p>
           <div class="history-details">
-            <span>{{ item.outputType || 'Tipo no especificado' }}</span>
-            <span *ngIf="item.format">{{ item.format }}</span>
-            <span>{{ item.status || 'Estado no disponible' }}</span>
+            <span>{{ mostrarValor(item.outputType, 'Tipo no especificado') }}</span>
+            <span [hidden]="!tieneFormato(item)">{{ item.format }}</span>
+            <span>{{ mostrarValor(item.status, 'Estado no disponible') }}</span>
           </div>
         </article>
       </div>

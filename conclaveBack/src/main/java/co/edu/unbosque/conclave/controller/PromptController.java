@@ -86,7 +86,7 @@ public class PromptController {
      * </ul>
      *
      * @param request DTO con el texto del prompt, el tipo de salida y el formato
-     * @param usuario usuario autenticado mediante JWT
+     * @param autenticacion usuario autenticado mediante JWT
      * @return lista de {@link AIResponseDTO} con la respuesta de cada preset, o
      *         {@code 503} si la API key no está configurada, o {@code 400} si el
      *         tipo de salida no tiene presets asignados, o {@code 500} si ocurre un
@@ -138,6 +138,13 @@ public class PromptController {
         return new ResponseEntity<>(respuestas, HttpStatus.OK);
     }
 
+    /**
+     * Registra el prompt en el historial cuando existe un usuario autenticado.
+     *
+     * @param request datos del prompt enviado
+     * @param autenticacion contexto de autenticación de la solicitud
+     * @param estado estado final de la generación
+     */
     private void guardarEnHistorial(PromptRequestDTO request, Authentication autenticacion, JobStatus estado) {
         if (autenticacion != null && autenticacion.isAuthenticated()) {
             promptHistoryService.guardarPrompt(request, autenticacion.getName(), estado);
