@@ -102,6 +102,28 @@ public class ExternalHTTPRequestHandler {
 	}
 
 	/**
+	 * Realiza una petición POST asíncrona con cuerpo JSON y respuesta binaria,
+	 * útil para proveedores que devuelven audio o imágenes directamente.
+	 *
+	 * @param url      URL del endpoint
+	 * @param headers  cabeceras HTTP (clave → valor)
+	 * @param jsonBody cuerpo de la petición en formato JSON
+	 * @return {@code CompletableFuture} con la respuesta HTTP (cuerpo como {@code byte[]})
+	 */
+	public CompletableFuture<HttpResponse<byte[]>> doPostBytesAsync(
+			String url, Map<String, String> headers, String jsonBody) {
+
+		HttpRequest.Builder builder = HttpRequest.newBuilder()
+				.uri(URI.create(url))
+				.timeout(Duration.ofSeconds(90))
+				.POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+
+		headers.forEach(builder::header);
+
+		return HTTP_CLIENT.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+	}
+
+	/**
 	 * Verifica que la respuesta HTTP sea exitosa (2xx).
 	 * Lanza {@link AIProviderException} si el código de estado no es 2xx.
 	 *

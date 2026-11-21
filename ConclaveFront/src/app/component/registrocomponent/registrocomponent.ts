@@ -1,6 +1,6 @@
 import { Component, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiService } from '../../services/api.service';
+import { Apiservice } from '../../services/apiservice';
 
 /** Componente para registrar una nueva cuenta. */
 @Component({
@@ -18,7 +18,7 @@ export class Registrocomponent {
   error = '';
   loading = false;
 
-  constructor(private api: ApiService, private router: Router, private cdr: ChangeDetectorRef) {}
+  constructor(private api: Apiservice, private router: Router, private cdr: ChangeDetectorRef) {}
 
   /**
    * Valida los datos y envía la solicitud de registro. Si el registro es exitoso,

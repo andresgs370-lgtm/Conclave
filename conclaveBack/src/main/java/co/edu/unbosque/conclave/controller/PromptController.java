@@ -135,7 +135,8 @@ public class PromptController {
         guardarEnHistorial(request, autenticacion,
                 generacionExitosa ? JobStatus.COMPLETED : JobStatus.FAILED);
 
-        return new ResponseEntity<>(respuestas, HttpStatus.OK);
+        HttpStatus estado = generacionExitosa ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR;
+        return new ResponseEntity<>(respuestas, estado);
     }
 
     /**

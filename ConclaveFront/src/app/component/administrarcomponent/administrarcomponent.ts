@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { AuthService } from '../../services/auth.service';
+import { Authservice } from '../../services/authservice';
 import { Router } from '@angular/router';
 
 /** Usuario tal como lo devuelve el backend (UserDTO). */
@@ -10,6 +10,16 @@ interface User {
   email: string;
   role: string;
   enabled?: boolean;
+}
+
+/** Registro de historial tal como lo devuelve el backend (PromptHistoryDTO). */
+interface PromptHistoryItem {
+  createdAt: string;
+  username: string | null;
+  promptText: string;
+  outputType: string | null;
+  model: string | null;
+  status: string | null;
 }
 
 /** Registro del historial de actividad de un usuario. */
@@ -96,7 +106,7 @@ export class Administrarcomponent implements OnInit {
   histMensaje = 'Sin actividad para mostrar.';
 
   /** Inyecta el cliente HTTP y el servicio de sesión. */
-  constructor(private http: HttpClient, private auth: AuthService, private router: Router) {}
+  constructor(private http: HttpClient, private auth: Authservice, private router: Router) {}
 
   /** Carga los datos del panel cuando la sesión pertenece a un administrador. */
   ngOnInit(): void {
@@ -200,7 +210,10 @@ export class Administrarcomponent implements OnInit {
   private readonly nombresProveedores: Record<string, string> = {
     OPENROUTER: 'OpenRouter',
     GEMINI: 'Google Gemini',
-    CLOUDFLARE: 'Cloudflare Workers AI',
+    CLOUDFLARE: 'Cloudflare Workers AI (imágenes y voz)',
+    POLLINATIONS: 'Pollinations.ai (key opcional)',
+    TOGETHER_AI: 'Together AI',
+    ELEVENLABS: 'ElevenLabs',
     HF_MINIMAX_H3: 'Hugging Face · MiniMax H3 FlashGen',
     HF_MINIMAX_TURBO: 'Hugging Face · MiniMax H3 Turbo',
     HF_OMNI_VIDEO: 'Hugging Face · Omni Video',
@@ -262,11 +275,30 @@ export class Administrarcomponent implements OnInit {
     });
   }
 
+  /**
+   * Convierte un registro del backend en la fila que muestra la tabla de historial.
+   *
+   * @param item registro de historial del backend
+   * @returns fila de la tabla
+   */
+  private static toHistItem(item: PromptHistoryItem): HistItem {
+    const partes = [item.outputType, item.model, item.status].filter(Boolean);
+    return {
+      timestamp: item.createdAt,
+      username: item.username ?? '—',
+      action: partes.join(' · '),
+      detail: item.promptText,
+    };
+  }
+
   /** Carga el historial con `GET /history/user/{id}` si hay usuario seleccionado, o con `GET /history` si no. */
   cargarHistorial(): void {
     const url = this.histUsuarioId != null ? `${this.api}/history/user/${this.histUsuarioId}` : `${this.api}/history`;
-    this.http.get<HistItem[]>(url, { headers: this.headers }).subscribe({
-      next: r => { this.historial = r ?? []; this.histMensaje = 'Sin actividad para mostrar.'; },
+    this.http.get<PromptHistoryItem[]>(url, { headers: this.headers }).subscribe({
+      next: r => {
+        this.historial = (r ?? []).map(Administrarcomponent.toHistItem);
+        this.histMensaje = 'Sin actividad para mostrar.';
+      },
       error: e => {
         this.historial = [];
         this.histMensaje = e.status === 404 ? 'El endpoint de historial aún no existe en el backend.' : 'No se pudo cargar el historial.';

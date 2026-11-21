@@ -40,6 +40,11 @@ import co.edu.unbosque.conclave.model.ResponseStatus;
 public class PromptService {
     private static final Logger LOGGER = Logger.getLogger(PromptService.class.getName());
     private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models/";
+    private static final String CLOUDFLARE_BASE = "https://api.cloudflare.com/client/v4/accounts/";
+    private static final String CONTENT_TYPE = "Content-Type";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final String AUTHORIZATION = "Authorization";
+    private static final String BEARER = "Bearer ";
 
     /**
      * Configuración de un Space de Hugging Face usado para generar video a partir de texto.
@@ -144,28 +149,135 @@ public class PromptService {
      *
      * <p>Proveedores soportados:</p>
      * <ul>
+     *   <li>{@code CLOUDFLARE} — Cloudflare Workers AI, FLUX.1 schnell (valor por defecto).</li>
+     *   <li>{@code POLLINATIONS} — Pollinations.ai, gratuito y con API key opcional.</li>
+     *   <li>{@code TOGETHER_AI} — Together AI, FLUX.1 schnell gratuito.</li>
      *   <li>{@code GEMINI} — Google Gemini imagen.</li>
      *   <li>{@code OPENROUTER} — 4 presets en paralelo via OpenRouter.</li>
-     *   <li>{@code CLOUDFLARE} — Cloudflare Workers AI (valor por defecto).</li>
      * </ul>
      *
      * @param request parametros de generacion
      * @return respuesta de generacion de imagen
      */
     private AIResponseDTO generateImage(PromptRequestDTO request) {
-        String provider = request.getImageProvider();
-        if (provider != null && "GEMINI".equalsIgnoreCase(provider.trim())) {
-            return generateGeminiImage(request);
-        }
-        if (provider != null && "OPENROUTER".equalsIgnoreCase(provider.trim())) {
-            return generateOpenRouterImages(request);
-        }
-        if (provider != null && !provider.isBlank()
-                && !"CLOUDFLARE".equalsIgnoreCase(provider.trim())) {
-            return failed(base(AIProvider.CLOUDFLARE, "image-provider", 400,
+        String provider = request.getImageProvider() == null ? "" : request.getImageProvider().trim().toUpperCase();
+        return switch (provider) {
+            case "", "CLOUDFLARE" -> generateCloudflareImage(request);
+            case "POLLINATIONS" -> generatePollinationsImage(request);
+            case "TOGETHER_AI" -> generateTogetherImage(request);
+            case "GEMINI" -> generateGeminiImage(request);
+            case "OPENROUTER" -> generateOpenRouterImages(request);
+            default -> failed(base(AIProvider.CLOUDFLARE, "image-provider", 400,
                     System.currentTimeMillis()), "Proveedor de imagen no valido: " + provider);
+        };
+    }
+
+    /**
+     * Genera una imagen con Pollinations.ai. Funciona sin API key en el nivel anónimo;
+     * si hay una key configurada se envía en la cabecera para quitar la marca de agua
+     * y el límite de velocidad. La imagen se descarga en memoria y se entrega al
+     * usuario sin guardarse en la base de datos.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la imagen generada o el detalle del error
+     */
+    private AIResponseDTO generatePollinationsImage(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String model = "pollinations-flux";
+        try {
+            String prompt = URLEncoder.encode(request.getPromptText(), StandardCharsets.UTF_8).replace("+", "%20");
+            long seed = (long) (Math.random() * 1_000_000);
+            String url = "https://image.pollinations.ai/prompt/" + prompt
+                    + "?width=1024&height=1024&model=flux&nologo=true&seed=" + seed;
+            String token = optionalKey(AIProvider.POLLINATIONS);
+            Map<String, String> headers = token == null ? Map.of() : Map.of(AUTHORIZATION, BEARER + token);
+            HttpResponse<byte[]> response = externalHandler.doGetBytesAsync(url, headers).join();
+            AIResponseDTO dto = base(AIProvider.POLLINATIONS, model, response.statusCode(), start);
+            String mime = response.headers().firstValue(CONTENT_TYPE).orElse("image/jpeg");
+            if (!ok(response.statusCode()) || !mime.startsWith("image/")) {
+                return failed(dto, "Pollinations: " + bytesError(response));
+            }
+            return successImage(dto, mime, Base64.getEncoder().encodeToString(response.body()), start);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Pollinations image generation failed", e);
+            return failed(base(AIProvider.POLLINATIONS, model, 500, start), "Error Pollinations: " + e.getMessage());
         }
-        return generateCloudflareImage(request);
+    }
+
+    /**
+     * Genera una imagen con el modelo gratuito FLUX.1 schnell de Together AI.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con la imagen generada o el detalle del error
+     */
+    private AIResponseDTO generateTogetherImage(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String model = "black-forest-labs/FLUX.1-schnell-Free";
+        String apiKey = optionalKey(AIProvider.TOGETHER_AI);
+        if (apiKey == null) {
+            return failed(base(AIProvider.TOGETHER_AI, model, 400, start),
+                    "Configura la API key de Together AI en el panel de administración.");
+        }
+        try {
+            JsonObject body = new JsonObject();
+            body.addProperty("model", model);
+            body.addProperty("prompt", request.getPromptText());
+            body.addProperty("width", 1024);
+            body.addProperty("height", 768);
+            body.addProperty("steps", 4);
+            body.addProperty("n", 1);
+            body.addProperty("response_format", "b64_json");
+            HttpResponse<String> response = post("https://api.together.xyz/v1/images/generations",
+                    Map.of(CONTENT_TYPE, APPLICATION_JSON, AUTHORIZATION, BEARER + apiKey), body.toString());
+            AIResponseDTO dto = base(AIProvider.TOGETHER_AI, model, response.statusCode(), start);
+            if (!ok(response)) return failed(dto, "Together AI: " + error(response));
+            JsonArray data = JsonParser.parseString(response.body()).getAsJsonObject().getAsJsonArray("data");
+            if (data == null || data.isEmpty()) return failed(dto, "Together AI no devolvió imágenes.");
+            JsonObject first = data.get(0).getAsJsonObject();
+            String b64 = stringValue(first, "b64_json");
+            if (b64 != null) return successImage(dto, mimeFromBase64(b64), b64, start);
+            String url = stringValue(first, "url");
+            if (url == null) return failed(dto, "Together AI no devolvió datos de imagen.");
+            dto.setMimeType("image/jpeg");
+            dto.setDownloadUrl(url);
+            dto.setFormat(MediaFormat.JPEG);
+            dto.setStatus(ResponseStatus.SUCCESS);
+            dto.setDurationMs(System.currentTimeMillis() - start);
+            return dto;
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Together AI image generation failed", e);
+            return failed(base(AIProvider.TOGETHER_AI, model, 500, start), "Error Together AI: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Marca la respuesta como exitosa con una imagen codificada en base64.
+     *
+     * @param dto respuesta que se actualizará
+     * @param mime tipo MIME de la imagen
+     * @param base64 contenido de la imagen en base64
+     * @param start instante en que inició la generación
+     * @return respuesta exitosa con la imagen como data URL
+     */
+    private AIResponseDTO successImage(AIResponseDTO dto, String mime, String base64, long start) {
+        dto.setMimeType(mime);
+        dto.setDownloadUrl("data:" + mime + ";base64," + base64);
+        dto.setFormat(mime.contains("png") ? MediaFormat.PNG : mime.contains("webp") ? MediaFormat.WEBP : MediaFormat.JPEG);
+        dto.setStatus(ResponseStatus.SUCCESS);
+        dto.setDurationMs(System.currentTimeMillis() - start);
+        return dto;
+    }
+
+    /**
+     * Detecta el tipo MIME de una imagen a partir del inicio de su contenido en base64.
+     *
+     * @param base64 contenido de la imagen en base64
+     * @return tipo MIME detectado; {@code image/jpeg} si no se reconoce
+     */
+    private String mimeFromBase64(String base64) {
+        if (base64.startsWith("iVBOR")) return "image/png";
+        if (base64.startsWith("UklGR")) return "image/webp";
+        return "image/jpeg";
     }
 
     /**
@@ -438,14 +550,142 @@ public class PromptService {
     }
 
     /**
+     * Selecciona el proveedor de audio y delega la generación.
+     *
+     * <p>Proveedores soportados:</p>
+     * <ul>
+     *   <li>{@code GEMINI} — Gemini Text-to-Speech (valor por defecto).</li>
+     *   <li>{@code CLOUDFLARE} — Deepgram Aura en Cloudflare Workers AI, con voz en español.</li>
+     *   <li>{@code ELEVENLABS} — ElevenLabs Multilingual v2.</li>
+     * </ul>
+     *
+     * @param request parámetros de generación
+     * @return respuesta del proveedor seleccionado
+     */
+    private AIResponseDTO generateAudio(PromptRequestDTO request) {
+        String provider = request.getAudioProvider() == null ? "" : request.getAudioProvider().trim().toUpperCase();
+        return switch (provider) {
+            case "", "GEMINI" -> generateGeminiAudio(request);
+            case "CLOUDFLARE" -> generateCloudflareAudio(request);
+            case "ELEVENLABS" -> generateElevenLabsAudio(request);
+            default -> failed(base(AIProvider.GEMINI, "audio-provider", 400,
+                    System.currentTimeMillis()), "Proveedor de audio no valido: " + provider);
+        };
+    }
+
+    /**
+     * Genera voz con Deepgram Aura en Cloudflare Workers AI. Intenta primero la voz
+     * en español ({@code aura-2-es}) y, si no está disponible, usa {@code aura-1}.
+     * Reutiliza la key {@code ACCOUNT_ID|API_TOKEN} de Cloudflare.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con el audio generado o el detalle del error
+     */
+    private AIResponseDTO generateCloudflareAudio(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String credentials = optionalKey(AIProvider.CLOUDFLARE);
+        String[] parts = credentials == null ? new String[0] : credentials.split("\\|", 2);
+        if (!validCloudflareCredentials(parts)) {
+            return failed(base(AIProvider.CLOUDFLARE, "@cf/deepgram/aura-2-es", 400, start),
+                    "Cloudflare key inválida. Configura ACCOUNT_ID|API_TOKEN en el panel de administración.");
+        }
+        String accountId = parts[0].trim();
+        String token = parts[1].trim();
+        JsonObject body = new JsonObject();
+        body.addProperty("text", request.getPromptText());
+        Map<String, String> headers = Map.of(CONTENT_TYPE, APPLICATION_JSON, AUTHORIZATION, BEARER + token);
+        AIResponseDTO last = null;
+        for (String model : List.of("@cf/deepgram/aura-2-es", "@cf/deepgram/aura-1")) {
+            try {
+                HttpResponse<byte[]> response = externalHandler
+                        .doPostBytesAsync(CLOUDFLARE_BASE + accountId + "/ai/run/" + model, headers, body.toString())
+                        .join();
+                AIResponseDTO dto = base(AIProvider.CLOUDFLARE, model, response.statusCode(), start);
+                if (!ok(response.statusCode())) {
+                    last = failed(dto, "Cloudflare: " + bytesError(response));
+                    continue;
+                }
+                AIResponseDTO audio = audioFromResponse(dto, response, start);
+                if (ResponseStatus.SUCCESS.equals(audio.getStatus())) return audio;
+                last = audio;
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "Cloudflare audio generation failed", e);
+                last = failed(base(AIProvider.CLOUDFLARE, model, 500, start), "Error Cloudflare: " + e.getMessage());
+            }
+        }
+        return last;
+    }
+
+    /**
+     * Genera voz con ElevenLabs usando el modelo multilingüe, que pronuncia bien el español.
+     *
+     * @param request parámetros de generación
+     * @return respuesta con el audio generado o el detalle del error
+     */
+    private AIResponseDTO generateElevenLabsAudio(PromptRequestDTO request) {
+        long start = System.currentTimeMillis();
+        String model = "eleven_multilingual_v2";
+        String apiKey = optionalKey(AIProvider.ELEVENLABS);
+        if (apiKey == null) {
+            return failed(base(AIProvider.ELEVENLABS, model, 400, start),
+                    "Configura la API key de ElevenLabs en el panel de administración.");
+        }
+        try {
+            JsonObject body = new JsonObject();
+            body.addProperty("text", request.getPromptText());
+            body.addProperty("model_id", model);
+            String voiceId = "JBFqnCBsd6RMkjVDRZzb";
+            HttpResponse<byte[]> response = externalHandler.doPostBytesAsync(
+                    "https://api.elevenlabs.io/v1/text-to-speech/" + voiceId + "?output_format=mp3_44100_128",
+                    Map.of(CONTENT_TYPE, APPLICATION_JSON, "Accept", "audio/mpeg", "xi-api-key", apiKey),
+                    body.toString()).join();
+            AIResponseDTO dto = base(AIProvider.ELEVENLABS, model, response.statusCode(), start);
+            if (!ok(response.statusCode())) return failed(dto, "ElevenLabs: " + bytesError(response));
+            return audioFromResponse(dto, response, start);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "ElevenLabs audio generation failed", e);
+            return failed(base(AIProvider.ELEVENLABS, model, 500, start), "Error ElevenLabs: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Convierte una respuesta de audio en un resultado exitoso. Acepta audio binario
+     * o JSON con el audio en base64 o como URL en {@code result.audio}.
+     *
+     * @param dto respuesta que se actualizará
+     * @param response respuesta HTTP del proveedor
+     * @param start instante en que inició la generación
+     * @return respuesta con el audio o con el detalle del fallo
+     */
+    private AIResponseDTO audioFromResponse(AIResponseDTO dto, HttpResponse<byte[]> response, long start) {
+        String contentType = response.headers().firstValue(CONTENT_TYPE).orElse("audio/mpeg");
+        if (contentType.contains("json")) {
+            JsonObject json = JsonParser.parseString(new String(response.body(), StandardCharsets.UTF_8)).getAsJsonObject();
+            JsonObject result = json.has("result") && json.get("result").isJsonObject() ? json.getAsJsonObject("result") : json;
+            String audio = stringValue(result, "audio");
+            if (audio == null || audio.isBlank()) return failed(dto, "El proveedor no devolvió audio: " + json);
+            dto.setDownloadUrl(audio.startsWith("http") ? audio : "data:audio/mpeg;base64," + audio);
+        } else {
+            dto.setDownloadUrl("data:audio/mpeg;base64," + Base64.getEncoder().encodeToString(response.body()));
+        }
+        dto.setMimeType("audio/mpeg");
+        dto.setFormat(MediaFormat.MP3);
+        dto.setStatus(ResponseStatus.SUCCESS);
+        dto.setDurationMs(System.currentTimeMillis() - start);
+        return dto;
+    }
+
+    /**
      * Genera audio hablado a partir del texto solicitado mediante Gemini.
      *
      * @param request parámetros de generación
      * @return respuesta con el audio generado o el detalle del error
      */
-    private AIResponseDTO generateAudio(PromptRequestDTO request) {
+    private AIResponseDTO generateGeminiAudio(PromptRequestDTO request) {
         long start = System.currentTimeMillis();
-        String key = key(AIProvider.GEMINI);
+        String key;
+        try { key = key(AIProvider.GEMINI); }
+        catch (Exception e) { return failed(base(AIProvider.GEMINI, "gemini-2.5-flash-preview-tts", 400, start), "Configura la API key de Gemini en el panel de administración."); }
         String model = "gemini-2.5-flash-preview-tts";
 
         JsonObject body = new JsonObject();
@@ -676,6 +916,61 @@ public class PromptService {
     /** Ejecuta una solicitud POST y espera su respuesta. */
     private HttpResponse<String> post(String url, Map<String, String> headers, String body) {
         return externalHandler.doPostAsync(url, headers, body).join();
+    }
+
+    /**
+     * Recupera la API key de un proveedor si está configurada.
+     *
+     * @param provider proveedor cuya key se busca
+     * @return key descifrada o {@code null} si no está configurada
+     */
+    private String optionalKey(AIProvider provider) {
+        try {
+            String value = apiKeyService.getDecryptedKey(provider);
+            return value == null || value.isBlank() ? null : value.trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Indica si un código HTTP representa una respuesta exitosa.
+     *
+     * @param status código HTTP
+     * @return {@code true} si está entre 200 y 299
+     */
+    private boolean ok(int status) {
+        return status >= 200 && status < 300;
+    }
+
+    /**
+     * Extrae un mensaje de error de una respuesta con cuerpo binario.
+     *
+     * @param response respuesta HTTP del proveedor
+     * @return mensaje de error legible
+     */
+    private String bytesError(HttpResponse<byte[]> response) {
+        String text = new String(response.body(), StandardCharsets.UTF_8);
+        try {
+            JsonObject json = JsonParser.parseString(text).getAsJsonObject();
+            if (json.has("detail") && json.get("detail").isJsonObject()) {
+                String message = stringValue(json.getAsJsonObject("detail"), "message");
+                if (message != null) return message;
+            }
+            if (json.has("errors") && json.get("errors").isJsonArray() && !json.getAsJsonArray("errors").isEmpty()
+                    && json.getAsJsonArray("errors").get(0).isJsonObject()) {
+                String message = stringValue(json.getAsJsonArray("errors").get(0).getAsJsonObject(), "message");
+                if (message != null) return message;
+            }
+            String message = stringValue(json, "error");
+            if (message != null) return message;
+            message = stringValue(json, "message");
+            if (message != null) return message;
+        } catch (Exception ignored) {
+            LOGGER.log(Level.FINE, "La respuesta de error no es JSON");
+        }
+        String shortText = text.length() > 300 ? text.substring(0, 300) : text;
+        return "HTTP " + response.statusCode() + ": " + shortText;
     }
 
     /** Ejecuta una solicitud GET y espera su respuesta. */

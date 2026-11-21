@@ -121,3 +121,70 @@
     align-items: flex-start;
   }
 }
+
+.keys-section {
+  margin-top: 2rem;
+}
+
+.keys-hint {
+  color: #a9b1c9;
+  font-size: 0.9rem;
+}
+
+.keys-ok {
+  color: #86efac;
+}
+
+.key-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.key-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.key-mask {
+  color: #a9b1c9;
+  font-family: monospace;
+  font-size: 0.85rem;
+}
+
+.key-state {
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.key-on { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+.key-off { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+.key-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.key-form .form-control {
+  flex: 1;
+  min-width: 220px;
+  background: #0e1225;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f4f9f9;
+}
+
+.key-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #d5dbee;
+}

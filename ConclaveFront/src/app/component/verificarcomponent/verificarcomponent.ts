@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { ApiService } from '../../services/api.service';
+import { Apiservice } from '../../services/apiservice';
 
 /**
  * Página para verificar la cuenta con el código de 6 dígitos enviado al correo
@@ -37,7 +37,7 @@ export class Verificarcomponent implements OnInit {
    * @param route ruta activa, de donde se lee el correo
    * @param router enrutador para volver al inicio de sesión
    */
-  constructor(private api: ApiService, private route: ActivatedRoute, private router: Router) {}
+  constructor(private api: Apiservice, private route: ActivatedRoute, private router: Router) {}
 
   /** Toma el correo enviado como parámetro de la URL, si existe. */
   ngOnInit(): void {

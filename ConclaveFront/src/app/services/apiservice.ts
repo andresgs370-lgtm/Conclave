@@ -8,6 +8,15 @@ export interface AuthResponse {
   role?: string;
 }
 
+/** API key registrada para un proveedor de IA. */
+export interface ProviderKey {
+  provider: string;
+  maskedKey: string;
+  active: boolean;
+  updatedAt: string | null;
+  updatedBy: string | null;
+}
+
 export interface PromptHistoryEntry {
   id: number;
   username?: string;
@@ -34,7 +43,7 @@ export interface GenerationResult {
 
 /** Servicio para comunicación HTTP con el backend de Conclave. */
 @Injectable({ providedIn: 'root' })
-export class ApiService {
+export class Apiservice {
   private readonly baseUrl = 'http://localhost:8080';
   private static readonly tokenStorageKey = 'conclave_token';
 
@@ -95,14 +104,36 @@ export class ApiService {
 
   /** Obtiene el perfil del usuario autenticado. */
   profile(): Observable<unknown> {
-    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: ApiService.authHeaders() }).pipe(timeout({ first: 12000 }));
+    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: Apiservice.authHeaders() }).pipe(timeout({ first: 12000 }));
   }
 
   /** Obtiene el historial de prompts del usuario autenticado. */
   promptHistory(): Observable<PromptHistoryEntry[]> {
     return this.http.get<PromptHistoryEntry[]>(`${this.baseUrl}/history/me`, {
-      headers: ApiService.authHeaders(),
+      headers: Apiservice.authHeaders(),
     }).pipe(timeout({ first: 10000 }));
+  }
+
+  /**
+   * Consulta las API keys registradas de todos los proveedores. Solo para administradores.
+   *
+   * @returns lista de proveedores con su key enmascarada
+   */
+  listarApiKeys(): Observable<ProviderKey[]> {
+    return this.http.get<ProviderKey[]>(`${this.baseUrl}/admin/apikey/getall`, { headers: Apiservice.authHeaders() });
+  }
+
+  /**
+   * Actualiza la API key y el estado de un proveedor. Solo para administradores.
+   *
+   * @param provider identificador del proveedor
+   * @param newKey nueva API key, o {@code null} para conservar la actual
+   * @param active indica si el proveedor queda activo
+   * @returns mensaje del backend
+   */
+  actualizarApiKey(provider: string, newKey: string | null, active: boolean): Observable<string> {
+    return this.http.put(`${this.baseUrl}/admin/apikey/update/${provider}`, { newKey, active },
+      { headers: Apiservice.authHeaders(), responseType: 'text' });
   }
 
   /** Envía un prompt al proveedor de generación seleccionado. */
@@ -113,6 +144,7 @@ export class ApiService {
     imageProvider?: string,
     videoProvider?: string,
     videoModel?: string,
+    audioProvider?: string,
   ): Observable<GenerationResult[]> {
     const payload = {
       promptText,
@@ -121,15 +153,16 @@ export class ApiService {
       imageProvider: imageProvider ?? null,
       videoProvider: videoProvider ?? null,
       videoModel: videoModel ?? null,
+      audioProvider: audioProvider ?? null,
     };
     return this.http.post<GenerationResult[]>(`${this.baseUrl}/prompt/generar`, payload, {
-      headers: ApiService.authHeaders(),
+      headers: Apiservice.authHeaders(),
     });
   }
 
   /** Construye los encabezados de autenticación si existe una sesión. */
   private static authHeaders(): HttpHeaders {
-    const token = localStorage.getItem(ApiService.tokenStorageKey);
+    const token = localStorage.getItem(Apiservice.tokenStorageKey);
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 }

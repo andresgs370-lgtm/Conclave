@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from '../../services/auth.service';
+import { Authservice } from '../../services/authservice';
 
 /** Componente de navegación principal. */
 @Component({
@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
   templateUrl: './navbarcomponent.html',
 })
 export class Navbarcomponent {
-  constructor(public auth: AuthService, private router: Router) {}
+  constructor(public auth: Authservice, private router: Router) {}
 
   /** Cierra la sesión y redirige al inicio. */
   logout(): void {
