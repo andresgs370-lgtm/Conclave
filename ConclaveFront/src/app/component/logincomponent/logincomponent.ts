@@ -17,10 +17,18 @@ export class Logincomponent {
   success = '';
   loading = false;
 
+  /** Mensajes de éxito que se muestran según el parámetro recibido en la URL. */
+  private static readonly mensajes: Record<string, string> = {
+    registered: 'Cuenta creada exitosamente. Ahora puedes iniciar sesión.',
+    verified: 'Cuenta verificada. Ya puedes iniciar sesión.',
+    reset: 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.',
+  };
+
   constructor(private api: ApiService, private auth: AuthService, private router: Router, private route: ActivatedRoute) {
     this.route.queryParamMap.subscribe((params) => {
-      if (params.get('registered') === 'true') {
-        this.success = 'Cuenta creada exitosamente. Ahora puedes iniciar sesión.';
+      const clave = Object.keys(Logincomponent.mensajes).find(key => params.get(key) === 'true');
+      if (clave) {
+        this.success = Logincomponent.mensajes[clave];
       }
     });
   }

@@ -1,0 +1,32 @@
+<section class="login-page">
+  <div class="login-card animate__animated animate__fadeIn">
+    <span class="eyebrow">Verificación</span>
+    <h1 class="login-title">Verifica tu cuenta</h1>
+    <p class="login-sub">Te enviamos un código de 6 dígitos a tu correo. Escríbelo para activar tu cuenta.</p>
+
+    <div class="alert-success-message" [hidden]="!success">{{ success }}</div>
+    <div class="alert-error-message" [hidden]="!error">{{ error }}</div>
+
+    <form (ngSubmit)="verificar()">
+      <div class="mb-3">
+        <label for="email" class="form-label">Correo</label>
+        <input id="email" class="form-control" type="email" name="email" [(ngModel)]="email"
+               placeholder="tucorreo@ejemplo.com" autocomplete="email" required>
+      </div>
+      <div class="mb-4">
+        <label for="codigo" class="form-label">Código de verificación</label>
+        <input id="codigo" class="form-control code-input" type="text" name="codigo" [(ngModel)]="codigo"
+               inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
+        {{ loading ? 'Verificando...' : 'Verificar cuenta' }}
+      </button>
+      <div class="secondary-actions">
+        <span class="hint">¿No te llegó o expiró?</span>
+        <button type="button" class="link-button" (click)="reenviar()" [disabled]="loading">Reenviar código</button>
+      </div>
+    </form>
+
+    <p class="login-footer"><a routerLink="/login">Volver a iniciar sesión</a></p>
+  </div>
+</section>

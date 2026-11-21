@@ -17,6 +17,8 @@ import { Imagencomponent } from './component/imagencomponent/imagencomponent';
 import { Sonidocomponent } from './component/sonidocomponent/sonidocomponent';
 import { Perfilcomponent } from './component/perfilcomponent/perfilcomponent';
 import { Administrarcomponent } from './component/administrarcomponent/administrarcomponent';
+import { Verificarcomponent } from './component/verificarcomponent/verificarcomponent';
+import { Recuperarcomponent } from './component/recuperarcomponent/recuperarcomponent';
 /**
  * Módulo raíz de la aplicación Conclave.
  */
@@ -34,6 +36,8 @@ import { Administrarcomponent } from './component/administrarcomponent/administr
     Sonidocomponent,
     Perfilcomponent,
     Administrarcomponent,
+    Verificarcomponent,
+    Recuperarcomponent,
   ],
   imports: [BrowserModule, HttpClientModule, FormsModule, RouterModule.forRoot(routes)],
   bootstrap: [App],

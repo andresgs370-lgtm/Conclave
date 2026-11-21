@@ -1,0 +1,50 @@
+<section class="login-page">
+  <div class="login-card animate__animated animate__fadeIn">
+    <span class="eyebrow">Recuperación</span>
+    <h1 class="login-title">Restablecer contraseña</h1>
+    <p class="login-sub" [hidden]="paso !== 'email'">Escribe el correo de tu cuenta y te enviaremos un código de 6 dígitos.</p>
+    <p class="login-sub" [hidden]="paso !== 'codigo'">Escribe el código que llegó a <strong>{{ email }}</strong> y tu nueva contraseña.</p>
+
+    <div class="alert-success-message" [hidden]="!success">{{ success }}</div>
+    <div class="alert-error-message" [hidden]="!error">{{ error }}</div>
+
+    <form [hidden]="paso !== 'email'" (ngSubmit)="solicitarCodigo()">
+      <div class="mb-4">
+        <label for="email" class="form-label">Correo</label>
+        <input id="email" class="form-control" type="email" name="email" [(ngModel)]="email"
+               placeholder="tucorreo@ejemplo.com" autocomplete="email" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
+        {{ loading ? 'Enviando...' : 'Enviar código' }}
+      </button>
+    </form>
+
+    <form [hidden]="paso !== 'codigo'" (ngSubmit)="confirmar()">
+      <div class="mb-3">
+        <label for="codigo" class="form-label">Código</label>
+        <input id="codigo" class="form-control code-input" type="text" name="codigo" [(ngModel)]="codigo"
+               inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code">
+      </div>
+      <div class="mb-3">
+        <label for="nuevaPassword" class="form-label">Nueva contraseña</label>
+        <input id="nuevaPassword" class="form-control" type="password" name="nuevaPassword"
+               [(ngModel)]="nuevaPassword" autocomplete="new-password">
+        <div class="hint">Mínimo 8 caracteres, con minúscula, mayúscula, número y símbolo.</div>
+      </div>
+      <div class="mb-4">
+        <label for="confirmarPassword" class="form-label">Confirmar contraseña</label>
+        <input id="confirmarPassword" class="form-control" type="password" name="confirmarPassword"
+               [(ngModel)]="confirmarPassword" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary w-100" [disabled]="loading">
+        {{ loading ? 'Guardando...' : 'Cambiar contraseña' }}
+      </button>
+      <div class="secondary-actions">
+        <button type="button" class="link-button" (click)="solicitarCodigo()" [disabled]="loading">Reenviar código</button>
+        <button type="button" class="link-button" (click)="cambiarCorreo()" [disabled]="loading">Cambiar correo</button>
+      </div>
+    </form>
+
+    <p class="login-footer"><a routerLink="/login">Volver a iniciar sesión</a></p>
+  </div>
+</section>
