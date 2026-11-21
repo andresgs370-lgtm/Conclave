@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,7 +29,6 @@ import co.edu.unbosque.conclave.exception.ApiKeyNotConfiguredException;
 import co.edu.unbosque.conclave.exception.UnsupportedOutputTypeException;
 import co.edu.unbosque.conclave.model.AIProvider;
 import co.edu.unbosque.conclave.model.MediaFormat;
-import co.edu.unbosque.conclave.model.OutputType;
 import co.edu.unbosque.conclave.model.ResponseStatus;
 
 /**

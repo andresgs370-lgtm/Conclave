@@ -11,7 +11,15 @@ public enum AIProvider {
     FAL_AI("fal.ai (Video Generation)"),
     KINOVI_AI("Kinovi AI (Video Generation)"),
     REPLICATE("Replicate (Video Generation)"),
-    HUGGINGFACE("Hugging Face (Video Generation)");
+    HUGGINGFACE("Hugging Face (Video Generation)"),
+    /** Modelo MiniMax H3 FlashGen de texto a video alojado en Hugging Face. */
+    HF_MINIMAX_H3("Hugging Face · MiniMax H3 FlashGen"),
+    /** Modelo MiniMax H3 Turbo de texto a video con audio alojado en Hugging Face. */
+    HF_MINIMAX_TURBO("Hugging Face · MiniMax H3 Turbo"),
+    /** Modelo Omni Video de texto a video alojado en Hugging Face. */
+    HF_OMNI_VIDEO("Hugging Face · Omni Video"),
+    /** Modelo ModelScope de texto a video alojado en Hugging Face. */
+    HF_MODELSCOPE("Hugging Face · ModelScope Text-to-Video");
 
     private final String displayName;
     /**

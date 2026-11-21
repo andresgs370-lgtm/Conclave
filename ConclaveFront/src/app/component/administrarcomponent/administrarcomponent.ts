@@ -201,12 +201,10 @@ export class Administrarcomponent implements OnInit {
     OPENROUTER: 'OpenRouter',
     GEMINI: 'Google Gemini',
     CLOUDFLARE: 'Cloudflare Workers AI',
-    JSON2VIDEO: 'JSON2Video',
-    AGNES_AI: 'Agnes AI',
-    FAL_AI: 'fal.ai',
-    KINOVI_AI: 'Kinovi AI',
-    REPLICATE: 'Replicate',
-    HUGGINGFACE: 'Hugging Face'
+    HF_MINIMAX_H3: 'Hugging Face · MiniMax H3 FlashGen',
+    HF_MINIMAX_TURBO: 'Hugging Face · MiniMax H3 Turbo',
+    HF_OMNI_VIDEO: 'Hugging Face · Omni Video',
+    HF_MODELSCOPE: 'Hugging Face · ModelScope Text-to-Video'
   };
 
   /** Nombre visible de cada proveedor de IA. */
