@@ -8,6 +8,8 @@ import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 /**
  * Clase de Objeto de Transferencia de Datos (DTO) para usuarios. Utilizada para transferir datos de
  * usuario entre capas de la aplicación, especialmente en operaciones de API.
@@ -19,12 +21,16 @@ public class UserDTO {
 	private Long id;
 
 	/** Nombre de usuario para autenticación. */
+	@Size(min = 3, max = 50, message = "El nombre de usuario debe tener entre 3 y 50 caracteres")
 	private String username;
 
 	/** Correo electrónico del usuario. */
+	@Email(message = "El formato del correo electrónico no es válido")
+	@Size(max = 120, message = "El correo electrónico no puede superar los 120 caracteres")
 	private String email;
 
 	/** Nombre completo del usuario. */
+	@Size(max = 120, message = "El nombre completo no puede superar los 120 caracteres")
 	private String fullName;
 
 	/**
@@ -32,6 +38,7 @@ public class UserDTO {
 	 * Solo se lee del JSON de entrada; <strong>nunca</strong> se incluye en respuestas.
 	 */
 	@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+	@Size(min = 8, max = 128, message = "La contraseña debe tener entre 8 y 128 caracteres")
 	private String password;
 
 	/** Rol del usuario en el sistema. */

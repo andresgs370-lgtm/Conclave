@@ -23,14 +23,19 @@ public class GlobalExceptionHandler {
 	 * @param request petición HTTP original
 	 * @return respuesta con estado 500
 	 */
-	@ExceptionHandler(AIProviderException.class)
-	public ResponseEntity<ErrorResponseDTO> handleAIProvider(
-			AIProviderException ex, HttpServletRequest request) {
-		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+	@ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+	public ResponseEntity<ErrorResponseDTO> handleValidation(
+			org.springframework.web.bind.MethodArgumentNotValidException ex,
+			HttpServletRequest request) {
+		String message = ex.getBindingResult().getFieldErrors().stream()
+				.map(err -> err.getField() + ": " + err.getDefaultMessage())
+				.findFirst()
+				.orElse("Datos de entrada inválidos");
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new ErrorResponseDTO(
-						HttpStatus.INTERNAL_SERVER_ERROR.value(),
-						"Error del proveedor de IA",
-						ex.getMessage(),
+						HttpStatus.BAD_REQUEST.value(),
+						"Error de validación",
+						message,
 						request.getRequestURI()));
 	}
 
@@ -120,7 +125,7 @@ public class GlobalExceptionHandler {
 				.body(new ErrorResponseDTO(
 						HttpStatus.INTERNAL_SERVER_ERROR.value(),
 						"Error interno del servidor",
-						ex.getMessage(),
+						"Ha ocurrido un error inesperado en el servidor.",
 						request.getRequestURI()));
 	}
 
