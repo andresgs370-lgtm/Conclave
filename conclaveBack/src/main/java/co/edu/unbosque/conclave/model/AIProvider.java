@@ -4,6 +4,7 @@ package co.edu.unbosque.conclave.model;
  * Proveedores externos utilizados para generar contenido multimedia.
  */
 public enum AIProvider {
+    OPENROUTER("OpenRouter (legacy)"),
     GEMINI("Google Gemini"),
     CLOUDFLARE("Cloudflare Workers AI (Images)"),
     JSON2VIDEO("JSON2Video (legacy)"),
