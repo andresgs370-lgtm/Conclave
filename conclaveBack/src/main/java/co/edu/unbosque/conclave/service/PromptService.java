@@ -29,7 +29,6 @@ import co.edu.unbosque.conclave.exception.ApiKeyNotConfiguredException;
 import co.edu.unbosque.conclave.exception.UnsupportedOutputTypeException;
 import co.edu.unbosque.conclave.model.AIProvider;
 import co.edu.unbosque.conclave.model.MediaFormat;
-import co.edu.unbosque.conclave.model.OutputType;
 import co.edu.unbosque.conclave.model.ResponseStatus;
 
 /**
@@ -645,17 +644,6 @@ public class PromptService {
     private String stringValue(JsonObject object, String field) {
         if (object == null || !object.has(field) || object.get(field).isJsonNull()) return null;
         try { return object.get(field).getAsString(); } catch (Exception e) { return null; }
-    }
-
-    /** Devuelve el primer campo textual no vacío de los nombres indicados. */
-    private String firstString(JsonObject object, String... fields) {
-        for (String field : fields) {
-            String value = stringValue(object, field);
-            if (value != null && !value.isBlank()) {
-                return value;
-            }
-        }
-        return null;
     }
 
     /** Convierte audio PCM sin encabezado en un archivo WAV con sus metadatos. */

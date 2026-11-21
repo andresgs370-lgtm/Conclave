@@ -39,9 +39,8 @@ export class Videocomponent {
    * @param prefix prefijo del tipo MIME, por ejemplo {@code 'video/'}
    * @returns {@code true} si el tipo MIME coincide con el prefijo
    */
-  isType(result: GenerationResult, prefix: string): boolean {
-    return (result.mimeType ?? '').startsWith(prefix);
-  }
+  readonly isType = (result: GenerationResult, prefix: string): boolean =>
+    (result.mimeType ?? '').startsWith(prefix);
 
   /** Abre los enlaces de descarga de los resultados disponibles. */
   downloadAll(): void {
