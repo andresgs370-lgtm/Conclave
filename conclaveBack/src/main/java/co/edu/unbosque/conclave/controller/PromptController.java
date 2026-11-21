@@ -5,6 +5,7 @@ import co.edu.unbosque.conclave.dto.PromptRequestDTO;
 import co.edu.unbosque.conclave.exception.ApiKeyNotConfiguredException;
 import co.edu.unbosque.conclave.exception.UnsupportedOutputTypeException;
 import co.edu.unbosque.conclave.model.ResponseStatus;
+import co.edu.unbosque.conclave.model.JobStatus;
 import co.edu.unbosque.conclave.model.User;
 import co.edu.unbosque.conclave.service.PromptService;
 import co.edu.unbosque.conclave.service.PromptHistoryService;
@@ -24,8 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,8 +45,8 @@ import java.util.List;
  * </p>
  *
  * <p>
- * Cuando al menos una generación termina correctamente, guarda únicamente
- * el texto del prompt en el historial del usuario autenticado.
+ * Registra cada prompt enviado en el historial del usuario autenticado,
+ * indicando si la generación terminó correctamente o falló.
  * </p>
  *
  * <p>
@@ -64,7 +64,7 @@ public class PromptController {
     @Autowired
     private PromptService promptService;
 
-    /** Servicio encargado de guardar únicamente los prompts exitosos. */
+    /** Servicio encargado de registrar los prompts enviados por cada usuario. */
     @Autowired
     private PromptHistoryService promptHistoryService;
 
@@ -86,7 +86,7 @@ public class PromptController {
      * </ul>
      *
      * @param request DTO con el texto del prompt, el tipo de salida y el formato
-     * @param usuario usuario autenticado mediante JWT
+     * @param autenticacion usuario autenticado mediante JWT
      * @return lista de {@link AIResponseDTO} con la respuesta de cada preset, o
      *         {@code 503} si la API key no está configurada, o {@code 400} si el
      *         tipo de salida no tiene presets asignados, o {@code 500} si ocurre un
@@ -117,21 +117,38 @@ public class PromptController {
     public ResponseEntity<List<AIResponseDTO>> generar(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Prompt del usuario con el tipo de salida y formato deseado", required = true, content = @Content(schema = @Schema(implementation = PromptRequestDTO.class), examples = @ExampleObject(value = "{\"promptText\":\"Un atardecer en las montañas\","
                     + "\"outputType\":\"IMAGE\",\"format\":\"PNG\"}"))) @Valid @RequestBody PromptRequestDTO request,
-            @AuthenticationPrincipal UserDetails usuario)
+            Authentication autenticacion)
             throws ApiKeyNotConfiguredException, UnsupportedOutputTypeException {
 
-        List<AIResponseDTO> respuestas = promptService.generar(request);
+        List<AIResponseDTO> respuestas;
+        try {
+            respuestas = promptService.generar(request);
+        } catch (ApiKeyNotConfiguredException | UnsupportedOutputTypeException | RuntimeException error) {
+            guardarEnHistorial(request, autenticacion, JobStatus.FAILED);
+            throw error;
+        }
 
-        // Guardar el prompt solamente si al menos una generación fue exitosa.
         boolean generacionExitosa = respuestas != null
                 && respuestas.stream()
                         .anyMatch(respuesta -> respuesta != null
                                 && respuesta.getStatus() == ResponseStatus.SUCCESS);
-
-        if (generacionExitosa && usuario != null) {
-            promptHistoryService.guardarPrompt(request, usuario.getUsername());
-        }
+        guardarEnHistorial(request, autenticacion,
+                generacionExitosa ? JobStatus.COMPLETED : JobStatus.FAILED);
 
         return new ResponseEntity<>(respuestas, HttpStatus.OK);
     }
+
+    /**
+     * Registra el prompt en el historial cuando existe un usuario autenticado.
+     *
+     * @param request datos del prompt enviado
+     * @param autenticacion contexto de autenticación de la solicitud
+     * @param estado estado final de la generación
+     */
+    private void guardarEnHistorial(PromptRequestDTO request, Authentication autenticacion, JobStatus estado) {
+        if (autenticacion != null && autenticacion.isAuthenticated()) {
+            promptHistoryService.guardarPrompt(request, autenticacion.getName(), estado);
+        }
+    }
+
 }

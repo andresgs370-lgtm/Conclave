@@ -35,7 +35,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/user")
-@CrossOrigin(origins = {"http://localhost:8080", "http://localhost:8081"})
+@CrossOrigin(origins = {"http://localhost:8080", "http://localhost:8081", "http://localhost:4200"})
 @Transactional
 @Tag(name = "Gestión de Usuarios", description = "Endpoints para administrar usuarios")
 @SecurityRequirement(name = "bearerAuth")

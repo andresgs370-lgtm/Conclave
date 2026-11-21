@@ -36,14 +36,15 @@ public class PromptHistoryService {
     }
 
     /**
-     * Guarda únicamente el prompt cuando la generación fue exitosa.
+     * Guarda el prompt enviado y registra si la generación terminó correctamente o falló.
      * La fecha de creación se genera automáticamente en el backend.
      *
      * @param request datos del prompt generado
      * @param username nombre de usuario autenticado
+     * @param status estado final de la generación
      */
     @Transactional
-    public void guardarPrompt(PromptRequestDTO request, String username) {
+    public void guardarPrompt(PromptRequestDTO request, String username, JobStatus status) {
         if (request == null || username == null || username.isBlank()) {
             return;
         }
@@ -62,8 +63,11 @@ public class PromptHistoryService {
                 request.getFormat(),
                 iaUtilizada
         );
-        history.setStatus(JobStatus.COMPLETED);
-        history.setCompletedAt(LocalDateTime.now());
+        JobStatus estadoFinal = status == null ? JobStatus.COMPLETED : status;
+        history.setStatus(estadoFinal);
+        if (estadoFinal != JobStatus.PENDING && estadoFinal != JobStatus.PROCESSING) {
+            history.setCompletedAt(LocalDateTime.now());
+        }
 
         historyRepository.save(history);
     }

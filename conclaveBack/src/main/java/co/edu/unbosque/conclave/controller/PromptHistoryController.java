@@ -1,11 +1,9 @@
 package co.edu.unbosque.conclave.controller;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,19 +38,18 @@ public class PromptHistoryController {
     /**
      * Obtiene el historial de prompts del usuario autenticado actualmente.
      *
-     * @param usuario detalles del usuario autenticado mediante JWT
+     * @param autenticacion autenticación del usuario mediante JWT
      * @return respuesta HTTP con la lista de {@link PromptHistoryDTO} del usuario
      */
     @GetMapping("/me")
-    public ResponseEntity<List<PromptHistoryDTO>> obtenerMiHistorial(
-            @AuthenticationPrincipal UserDetails usuario) {
+    public ResponseEntity<List<PromptHistoryDTO>> obtenerMiHistorial(Authentication autenticacion) {
 
-        if (usuario == null) {
-            return ResponseEntity.ok(Collections.emptyList());
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            return ResponseEntity.status(401).build();
         }
 
         List<PromptHistoryDTO> historial =
-                historyService.obtenerHistorial(usuario.getUsername());
+                historyService.obtenerHistorial(autenticacion.getName());
 
         return ResponseEntity.ok(historial);
     }
