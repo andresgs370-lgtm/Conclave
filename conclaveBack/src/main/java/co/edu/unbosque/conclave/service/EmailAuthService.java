@@ -6,12 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+
 /**
  * Servicio que maneja la verificacion de correo al registro y el
  * restablecimiento de contrasena mediante codigo enviado por correo.
@@ -25,79 +26,90 @@ import java.util.regex.Pattern;
 @Service
 public class EmailAuthService {
 
-    /** Logger de la clase. */
-    private static final Logger LOGGER = Logger.getLogger(EmailAuthService.class.getName());
+	/** Logger de la clase. */
+	private static final Logger LOGGER = Logger.getLogger(EmailAuthService.class.getName());
 
-    /** Minutos de validez del codigo de verificacion. */
-    private static final int EXPIRY_MINUTES = 10;
+	/** Minutos de validez del codigo de verificacion. */
+	private static final int EXPIRY_MINUTES = 10;
 
-    /** Repositorio de usuarios. */
-    @Autowired
-    private UserRepository userRepo;
+	/** Generador criptograficamente seguro para codigos temporales. */
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    /** Servicio de envio de correos. */
-    @Autowired
-    private EmailService emailService;
+	/** Patron de validacion de contrasena. */
+	private static final Pattern PASSWORD_PATTERN = Pattern.compile(
+			"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).{8,}$");
 
-    /** Codificador de contrasenas. */
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+	/** Repositorio de usuarios. */
+	@Autowired
+	private UserRepository userRepo;
 
-    /** Constructor por defecto. */
-    public EmailAuthService() {
-    }
+	/** Servicio de envio de correos. */
+	@Autowired
+	private EmailService emailService;
 
-    /**
-     * Genera un codigo de verificacion, lo guarda en el usuario con expiracion
-     * de 10 minutos y lo envia al correo registrado.
-     *
-     * <p>Resultados posibles:</p>
-     * <ul>
-     *   <li>{@code 0} — codigo enviado correctamente.</li>
-     *   <li>{@code 1} — usuario no encontrado con ese correo.</li>
-     *   <li>{@code 2} — fallo el envio del correo.</li>
-     * </ul>
-     *
-     * @param email correo del usuario recien registrado
-     * @return codigo de resultado
-     */
-    public int enviarCodigoRegistro(String email) {
-        Optional<User> found = userRepo.findByEmail(email);
-        if (found.isEmpty()) {
-            return 1;
-        }
+	/** Codificador de contrasenas. */
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
-        User user = found.get();
-        String codigo = generarCodigo();
-        user.setVerificationCode(codigo);
-        user.setVerificationExpiry(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
-        userRepo.save(user);
+	/** Constructor por defecto. */
+	public EmailAuthService() {
+	}
 
-        boolean enviado = emailService.enviarCodigoVerificacion(email, codigo);
-        if (!enviado) {
-            LOGGER.log(Level.SEVERE, "No se pudo enviar el correo de verificacion a {0}", email);
-            return 2;
-        }
-        return 0;
-    }
+	/**
+	 * Genera un codigo de verificacion, lo guarda en el usuario con expiracion
+	 * de 10 minutos y lo envia al correo registrado.
+	 *
+	 * <p>Resultados posibles:</p>
+	 * <ul>
+	 *   <li>{@code 0} — codigo enviado correctamente.</li>
+	 *   <li>{@code 1} — usuario no encontrado con ese correo.</li>
+	 *   <li>{@code 2} — fallo el envio del correo.</li>
+	 * </ul>
+	 *
+	 * @param email correo del usuario recien registrado
+	 * @return codigo de resultado
+	 */
+	public int enviarCodigoRegistro(String email) {
+		if (email == null || email.isBlank()) {
+			return 1;
+		}
+		String normalizedEmail = email.trim().toLowerCase();
+		Optional<User> found = userRepo.findByEmail(normalizedEmail);
+		if (found.isEmpty()) {
+			return 1;
+		}
 
-    /**
-     * Verifica el codigo de registro ingresado por el usuario.
-     * Si es correcto y no ha expirado, activa la cuenta.
-     *
-     * <p>Resultados posibles:</p>
-     * <ul>
-     *   <li>{@code 0} — cuenta verificada y activada.</li>
-     *   <li>{@code 1} — usuario no encontrado.</li>
-     *   <li>{@code 2} — codigo incorrecto.</li>
-     *   <li>{@code 3} — codigo expirado.</li>
-     * </ul>
-     *
-     * @param email  correo del usuario
-     * @param codigo codigo ingresado por el usuario
-     * @return codigo de resultado
-     */
-    public int verificarRegistro(String email, String codigo) {
+		User user = found.get();
+		String codigo = generarCodigo();
+		user.setVerificationCode(codigo);
+		user.setVerificationExpiry(LocalDateTime.now().plusMinutes(EXPIRY_MINUTES));
+		userRepo.save(user);
+
+		boolean enviado = emailService.enviarCodigoVerificacion(normalizedEmail, codigo);
+		if (!enviado) {
+			LOGGER.log(Level.SEVERE, "No se pudo enviar el correo de verificacion a {0}", normalizedEmail);
+			return 2;
+		}
+		return 0;
+	}
+
+	/**
+	 * Verifica el codigo de registro ingresado por el usuario.
+	 * Si es correcto y no ha expirado, activa la cuenta.
+	 *
+	 * <p>Resultados posibles:</p>
+	 * <ul>
+	 *   <li>{@code 0} — cuenta verificada y activada.</li>
+	 *   <li>{@code 1} — usuario no encontrado.</li>
+	 *   <li>{@code 2} — codigo incorrecto.</li>
+	 *   <li>{@code 3} — codigo expirado.</li>
+	 * </ul>
+	 *
+	 * @param email  correo del usuario
+	 * @param codigo codigo ingresado por el usuario
+	 * @return codigo de resultado
+	 */
+	public int verificarRegistro(String email, String codigo) {
 		if (email == null || codigo == null || email.isBlank() || codigo.isBlank()) {
 			return 2;
 		}
@@ -127,26 +139,21 @@ public class EmailAuthService {
 		userRepo.save(user);
 		return 0;
 	}
-    
-    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-			"^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^a-zA-Z0-9]).{8,}$");
-    
-    /**
-     * Genera un codigo de reset, lo guarda en el usuario con expiracion
-     * de 10 minutos y lo envia al correo registrado.
-     *
-     * Resultados posibles:
-     * 
-     *   {@code 0} — codigo enviado correctamente.
-     *   {@code 1} — usuario no encontrado con ese correo.
-     *   {@code 2} — fallo el envio del correo.
-     * 
-     *
-     * @param email correo del usuario que solicita el reset
-     * @return codigo de resultado
-     */
-    
 
+	/**
+	 * Genera un codigo de reset, lo guarda en el usuario con expiracion
+	 * de 10 minutos y lo envia al correo registrado.
+	 *
+	 * <p>Resultados posibles:</p>
+	 * <ul>
+	 *   <li>{@code 0} — codigo enviado correctamente.</li>
+	 *   <li>{@code 1} — usuario no encontrado con ese correo.</li>
+	 *   <li>{@code 2} — fallo el envio del correo.</li>
+	 * </ul>
+	 *
+	 * @param email correo del usuario que solicita el reset
+	 * @return codigo de resultado
+	 */
 	public int solicitarReset(String email) {
 		if (email == null || email.isBlank()) {
 			return 1;
@@ -171,6 +178,24 @@ public class EmailAuthService {
 		return 0;
 	}
 
+	/**
+	 * Confirma el restablecimiento de contrasena validando el correo, el codigo
+	 * temporal y la complejidad de la nueva contrasena.
+	 *
+	 * <p>Resultados posibles:</p>
+	 * <ul>
+	 *   <li>{@code 0} — contrasena actualizada correctamente.</li>
+	 *   <li>{@code 1} — usuario no encontrado.</li>
+	 *   <li>{@code 2} — codigo incorrecto o vacio.</li>
+	 *   <li>{@code 3} — codigo expirado.</li>
+	 *   <li>{@code 4} — la nueva contrasena no cumple los requisitos.</li>
+	 * </ul>
+	 *
+	 * @param email         correo del usuario
+	 * @param codigo        codigo de 6 digitos enviado por correo
+	 * @param nuevaPassword nueva contrasena a establecer
+	 * @return codigo de resultado
+	 */
 	public int confirmarReset(String email, String codigo, String nuevaPassword) {
 		if (email == null || email.isBlank()) {
 			return 1;
@@ -206,14 +231,13 @@ public class EmailAuthService {
 		return 0;
 	}
 
-    /**
-     * Genera un codigo numerico aleatorio de 6 digitos.
-     *
-     * @return cadena de 6 digitos
-     */
-    private String generarCodigo() {
-        Random random = new Random();
-        int numero = 100000 + random.nextInt(900000);
-        return String.valueOf(numero);
-    }
+	/**
+	 * Genera un codigo numerico aleatorio de 6 digitos.
+	 *
+	 * @return cadena de 6 digitos
+	 */
+	private String generarCodigo() {
+		int numero = 100000 + SECURE_RANDOM.nextInt(900000);
+		return String.valueOf(numero);
+	}
 }

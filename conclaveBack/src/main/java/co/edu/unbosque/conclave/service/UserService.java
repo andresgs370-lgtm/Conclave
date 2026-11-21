@@ -198,53 +198,65 @@ public class UserService implements CRUDOperation<UserDTO> {
 
 		User temp = found.get();
 
-		// Cambio de username: normalizar y verificar que no esté en uso por otro
-		if (newData.getUsername() != null && !newData.getUsername().isBlank()) {
-			String normalizedUsername = newData.getUsername().trim();
-			Optional<User> existing = userRepo.findByUsername(normalizedUsername);
-			if (existing.isPresent() && !existing.get().getId().equals(id)) {
-				return 1;
-			}
-			temp.setUsername(normalizedUsername);
+		if (!applyUsernameUpdate(temp, id, newData.getUsername())) {
+			return 1;
+		}
+		if (!applyPasswordUpdate(temp, newData.getPassword())) {
+			return 3;
+		}
+		if (!applyEmailUpdate(temp, id, newData.getEmail())) {
+			return 3;
 		}
 
-		// Cambio de contraseña: validar política de seguridad antes de cifrar
-		if (newData.getPassword() != null && !newData.getPassword().isBlank()) {
-			try {
-				validatePassword(newData.getPassword());
-			} catch (PasswordNotValidException e) {
-				return 3;
-			}
-			temp.setPassword(passwordEncoder.encode(newData.getPassword()));
-		}
-
-		// Cambio de email: normalizar y validar que no esté en uso por otro
-		if (newData.getEmail() != null && !newData.getEmail().isBlank()) {
-			String normalizedEmail = newData.getEmail().trim().toLowerCase();
-			Optional<User> existingEmail = userRepo.findByEmail(normalizedEmail);
-			if (existingEmail.isPresent() && !existingEmail.get().getId().equals(id)) {
-				return 3;
-			}
-			temp.setEmail(normalizedEmail);
-		}
-
-		// Cambio de nombre completo
 		if (newData.getFullName() != null) {
 			temp.setFullName(newData.getFullName().trim());
 		}
-
-		// Cambio de rol
 		if (newData.getRole() != null) {
 			temp.setRole(newData.getRole());
 		}
-
-		// Cambio de enabled: solo si el DTO lo envía explícitamente
 		if (newData.getEnabled() != null) {
 			temp.setEnabled(newData.getEnabled());
 		}
 
 		userRepo.save(temp);
 		return 0;
+	}
+	private boolean applyUsernameUpdate(User target, Long id, String newUsername) {
+		if (newUsername == null || newUsername.isBlank()) {
+			return true;
+		}
+		String normalizedUsername = newUsername.trim();
+		Optional<User> existing = userRepo.findByUsername(normalizedUsername);
+		if (existing.isPresent() && !existing.get().getId().equals(id)) {
+			return false;
+		}
+		target.setUsername(normalizedUsername);
+		return true;
+	}
+	private boolean applyPasswordUpdate(User target, String newPassword) {
+		if (newPassword == null || newPassword.isBlank()) {
+			return true;
+		}
+		try {
+			validatePassword(newPassword);
+		} catch (PasswordNotValidException e) {
+			return false;
+		}
+		target.setPassword(passwordEncoder.encode(newPassword));
+		return true;
+	}
+
+	private boolean applyEmailUpdate(User target, Long id, String newEmail) {
+		if (newEmail == null || newEmail.isBlank()) {
+			return true;
+		}
+		String normalizedEmail = newEmail.trim().toLowerCase();
+		Optional<User> existingEmail = userRepo.findByEmail(normalizedEmail);
+		if (existingEmail.isPresent() && !existingEmail.get().getId().equals(id)) {
+			return false;
+		}
+		target.setEmail(normalizedEmail);
+		return true;
 	}
 
 	/**
