@@ -25,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -116,7 +117,7 @@ public class PromptController {
     public ResponseEntity<List<AIResponseDTO>> generar(
             @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Prompt del usuario con el tipo de salida y formato deseado", required = true, content = @Content(schema = @Schema(implementation = PromptRequestDTO.class), examples = @ExampleObject(value = "{\"promptText\":\"Un atardecer en las montañas\","
                     + "\"outputType\":\"IMAGE\",\"format\":\"PNG\"}"))) @Valid @RequestBody PromptRequestDTO request,
-            @AuthenticationPrincipal User usuario)
+            @AuthenticationPrincipal UserDetails usuario)
             throws ApiKeyNotConfiguredException, UnsupportedOutputTypeException {
 
         List<AIResponseDTO> respuestas = promptService.generar(request);
@@ -127,8 +128,8 @@ public class PromptController {
                         .anyMatch(respuesta -> respuesta != null
                                 && respuesta.getStatus() == ResponseStatus.SUCCESS);
 
-        if (generacionExitosa) {
-            promptHistoryService.guardarPrompt(request, usuario);
+        if (generacionExitosa && usuario != null) {
+            promptHistoryService.guardarPrompt(request, usuario.getUsername());
         }
 
         return new ResponseEntity<>(respuestas, HttpStatus.OK);

@@ -12,23 +12,44 @@ import co.edu.unbosque.conclave.model.JobStatus;
 import co.edu.unbosque.conclave.model.PromptHistory;
 import co.edu.unbosque.conclave.model.User;
 import co.edu.unbosque.conclave.repository.PromptHistoryRepository;
+import co.edu.unbosque.conclave.repository.UserRepository;
 
+/**
+ * Servicio encargado de gestionar el guardado y consulta del historial de prompts de los usuarios.
+ */
 @Service
 public class PromptHistoryService {
 
     private final PromptHistoryRepository historyRepository;
+    private final UserRepository userRepository;
 
-    public PromptHistoryService(PromptHistoryRepository historyRepository) {
+    /**
+     * Inicializa el servicio con los repositorios de historial y usuarios.
+     *
+     * @param historyRepository repositorio JPA para registros de historial de prompts
+     * @param userRepository repositorio JPA para consultar usuarios
+     */
+    public PromptHistoryService(PromptHistoryRepository historyRepository,
+                                UserRepository userRepository) {
         this.historyRepository = historyRepository;
+        this.userRepository = userRepository;
     }
 
     /**
      * Guarda únicamente el prompt cuando la generación fue exitosa.
      * La fecha de creación se genera automáticamente en el backend.
+     *
+     * @param request datos del prompt generado
+     * @param username nombre de usuario autenticado
      */
     @Transactional
-    public void guardarPrompt(PromptRequestDTO request, User usuario) {
-        if (request == null || usuario == null) {
+    public void guardarPrompt(PromptRequestDTO request, String username) {
+        if (request == null || username == null || username.isBlank()) {
+            return;
+        }
+
+        User usuario = userRepository.findByUsername(username).orElse(null);
+        if (usuario == null) {
             return;
         }
 
@@ -50,6 +71,9 @@ public class PromptHistoryService {
     /**
      * Obtiene únicamente el historial de prompts del usuario autenticado,
      * ordenado de más reciente a más antiguo.
+     *
+     * @param username nombre de usuario
+     * @return lista de {@link PromptHistoryDTO} del usuario
      */
     @Transactional(readOnly = true)
     public List<PromptHistoryDTO> obtenerHistorial(String username) {
@@ -59,6 +83,12 @@ public class PromptHistoryService {
                 .toList();
     }
 
+    /**
+     * Determina el identificador del proveedor o modelo de IA utilizado según el tipo de salida.
+     *
+     * @param request solicitud con el tipo de salida y parámetros opcionales de proveedor/modelo
+     * @return nombre del proveedor o modelo resuelto, o {@code null} si no hay tipo de salida
+     */
     private String resolverIaUtilizada(PromptRequestDTO request) {
         if (request.getOutputType() == null) {
             return null;
@@ -81,6 +111,12 @@ public class PromptHistoryService {
         };
     }
 
+    /**
+     * Convierte una entidad {@link PromptHistory} en su representación {@link PromptHistoryDTO}.
+     *
+     * @param entity entidad de historial a transformar
+     * @return DTO con los datos del registro de historial
+     */
     private PromptHistoryDTO toDTO(PromptHistory entity) {
         PromptHistoryDTO dto = new PromptHistoryDTO();
         dto.setId(entity.getId());
