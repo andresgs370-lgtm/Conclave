@@ -68,14 +68,12 @@ export class Perfilcomponent implements OnInit {
   }
 
   /** Devuelve un texto alternativo cuando el valor está vacío. */
-  mostrarValor(valor: string | null | undefined, alternativa: string): string {
-    return valor || alternativa;
-  }
+  mostrarValor = (valor: string | null | undefined, alternativa: string): string =>
+    valor || alternativa;
 
   /** Devuelve la fecha del registro con el formato utilizado en el historial. */
-  mostrarFecha(fecha: string | null | undefined): string {
-    return fecha ? formatDate(fecha, 'dd/MM/yyyy, HH:mm', 'en-US') : 'Fecha no disponible';
-  }
+  mostrarFecha = (fecha: string | null | undefined): string =>
+    fecha ? formatDate(fecha, 'dd/MM/yyyy, HH:mm', 'en-US') : 'Fecha no disponible';
 
   /** Indica si la cuenta debe mostrarse como activa. */
   cuentaActiva(): string {
@@ -93,9 +91,8 @@ export class Perfilcomponent implements OnInit {
   }
 
   /** Indica si un registro contiene un formato definido. */
-  tieneFormato(item: PromptHistoryEntry): boolean {
-    return Boolean(item.format);
-  }
+  tieneFormato = (item: PromptHistoryEntry): boolean =>
+    Boolean(item.format);
 
   /**
    * Convierte los errores HTTP en mensajes comprensibles para el usuario.
