@@ -109,18 +109,32 @@ export class Recuperarcomponent {
     this.success = '';
   }
 
+  /** Mensajes de error según el código HTTP de la respuesta. */
+  private static readonly erroresPorEstado: Record<number, string> = {
+    0: 'No fue posible conectar con el servidor.',
+    400: 'Código incorrecto.',
+    404: 'No existe una cuenta con ese correo.',
+    410: 'El código ha expirado. Solicita uno nuevo.',
+  };
+
   /**
-   * Convierte un error HTTP en un mensaje legible para el usuario.
+   * Convierte un error HTTP en un mensaje legible para el usuario. Usa el texto
+   * del backend cuando existe y, si no, un mensaje según el código HTTP.
    *
    * @param e error devuelto por la petición
    * @returns mensaje de error
    */
   private static mensajeError(e: HttpErrorResponse): string {
-    if (e.status === 0) return 'No fue posible conectar con el servidor.';
-    if (typeof e.error === 'string' && e.error.trim()) return e.error;
-    if (e.status === 400) return 'Código incorrecto.';
-    if (e.status === 404) return 'No existe una cuenta con ese correo.';
-    if (e.status === 410) return 'El código ha expirado. Solicita uno nuevo.';
-    return 'No fue posible completar la solicitud.';
+    return Recuperarcomponent.textoError(e) || Recuperarcomponent.erroresPorEstado[e.status] || 'No fue posible completar la solicitud.';
+  }
+
+  /**
+   * Obtiene el texto de error enviado por el backend.
+   *
+   * @param e error devuelto por la petición
+   * @returns texto del backend o cadena vacía si no hay
+   */
+  private static textoError(e: HttpErrorResponse): string {
+    return typeof e.error === 'string' ? e.error.trim() : '';
   }
 }

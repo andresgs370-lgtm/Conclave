@@ -86,12 +86,14 @@ export class Registrocomponent {
   private static registrationError(err: unknown): string {
     const raw = Registrocomponent.errorPayload(err);
     const message = Registrocomponent.errorText(raw).toLowerCase();
-    return Registrocomponent.serverError(err, raw)
-      || Registrocomponent.usernameError(message)
-      || Registrocomponent.emailError(message)
-      || Registrocomponent.passwordError(message)
-      || Registrocomponent.badRequestError(err, raw)
-      || 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
+    const candidatos = [
+      Registrocomponent.serverError(err, raw),
+      Registrocomponent.usernameError(message),
+      Registrocomponent.emailError(message),
+      Registrocomponent.passwordError(message),
+      Registrocomponent.badRequestError(err, raw),
+    ];
+    return candidatos.find(Boolean) ?? 'No fue posible conectar con el servidor. Inténtalo nuevamente.';
   }
 
   /**
