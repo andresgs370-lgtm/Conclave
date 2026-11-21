@@ -32,16 +32,6 @@ export class Videocomponent {
 
   constructor(private api: ApiService) {}
 
-  /**
-   * Indica si el resultado tiene un tipo MIME que empieza por el prefijo indicado.
-   *
-   * @param result resultado de la generación
-   * @param prefix prefijo del tipo MIME, por ejemplo {@code 'video/'}
-   * @returns {@code true} si el tipo MIME coincide con el prefijo
-   */
-  readonly isType = (result: GenerationResult, prefix: string): boolean =>
-    (result.mimeType ?? '').startsWith(prefix);
-
   /** Abre los enlaces de descarga de los resultados disponibles. */
   downloadAll(): void {
     this.results.filter(result => Boolean(result.downloadUrl)).forEach(result => window.open(result.downloadUrl, '_blank', 'noopener'));

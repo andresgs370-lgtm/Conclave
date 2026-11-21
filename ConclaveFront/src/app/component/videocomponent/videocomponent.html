@@ -62,9 +62,9 @@
                 <p [hidden]="!(result.textContent)" class="mb-2 text-break">{{ result.textContent }}</p>
                 <p [hidden]="!(result.errorMessage)" class="text-danger mb-2">{{ result.errorMessage }}</p>
                 <div [hidden]="!(result.downloadUrl)">
-                  <img [hidden]="!isType(result, 'image/')" [src]="isType(result, 'image/') ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
-                  <video [hidden]="!isType(result, 'video/')" [src]="isType(result, 'video/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
-                  <audio [hidden]="!isType(result, 'audio/')" [src]="isType(result, 'audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
+                  <img [hidden]="!(result.mimeType || '').startsWith('image/')" [src]="(result.mimeType || '').startsWith('image/') ? result.downloadUrl : null" class="img-fluid rounded mb-2" alt="Contenido generado">
+                  <video [hidden]="!(result.mimeType || '').startsWith('video/')" [src]="(result.mimeType || '').startsWith('video/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></video>
+                  <audio [hidden]="!(result.mimeType || '').startsWith('audio/')" [src]="(result.mimeType || '').startsWith('audio/') ? result.downloadUrl : null" controls preload="none" class="w-100 mb-2"></audio>
                   <a class="btn btn-outline-light btn-sm" [href]="result.downloadUrl" target="_blank" rel="noopener" download>Ver / descargar</a>
                 </div>
                 <small class="text-secondary" [hidden]="!(result.durationMs)">Tiempo: {{ result.durationMs }} ms</small>
