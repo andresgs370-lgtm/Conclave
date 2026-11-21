@@ -31,6 +31,9 @@ public class EmailService {
     /** Asunto del correo de verificacion de login. */
     private static final String ASUNTO_VERIFICACION = "Conclave - Codigo de verificacion";
 
+    /** Asunto del correo de restablecimiento de contrasena. */
+    private static final String ASUNTO_RESET = "Conclave - Restablecimiento de contrasena";
+
     /** Remitente de los correos (leido desde application.properties). */
     @Value("${spring.mail.username}")
     private String remitente;
@@ -104,11 +107,27 @@ public class EmailService {
     }
 
     /**
+     * Envia un correo con el codigo de restablecimiento de contrasena.
+     *
+     * @param destinatario direccion de correo del usuario
+     * @param codigo       codigo de 6 digitos generado previamente
+     * @return {@code true} si el correo se envio correctamente,
+     *         {@code false} si ocurrio un error durante el envio
+     */
+    public boolean enviarCodigoReset(String destinatario, String codigo) {
+        String cuerpo = "Conclave - Restablecimiento de contrasena\n\n"
+                + "Tu codigo para restablecer tu contrasena es: " + codigo + "\n\n"
+                + "Este codigo expira en 10 minutos.\n"
+                + "Si no solicitaste esto, ignora este mensaje.";
+        return enviarCorreo(destinatario, ASUNTO_RESET, cuerpo);
+    }
+
+    /**
      * Construye el cuerpo en texto plano del correo de verificacion.
      *
-     * <p>El diseno visual y la presentacion final del codigo al usuario
+     *El diseno visual y la presentacion final del codigo al usuario
      * es responsabilidad del frontend. Este metodo solo genera el texto
-     * que viaja en el correo.</p>
+     * que viaja en el correo.
      *
      * @param codigo codigo de verificacion de 6 digitos
      * @return texto plano listo para incluir en el cuerpo del correo
