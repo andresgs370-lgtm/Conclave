@@ -2,6 +2,7 @@ package co.edu.unbosque.conclave.repository;
 
 import co.edu.unbosque.conclave.model.PromptHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +19,7 @@ public interface PromptHistoryRepository extends JpaRepository<PromptHistory, Lo
 	 * @param username nombre de usuario
 	 * @return lista de registros de historial del usuario
 	 */
+	@EntityGraph(attributePaths = "user")
 	List<PromptHistory> findByUserUsernameOrderByCreatedAtDesc(String username);
 
 	/**

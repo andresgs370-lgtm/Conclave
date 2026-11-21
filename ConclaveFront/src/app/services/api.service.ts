@@ -1,11 +1,22 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
 
 export interface AuthResponse {
   token: string;
   username: string;
   role?: string;
+}
+
+export interface PromptHistoryEntry {
+  id: number;
+  username?: string;
+  promptText?: string;
+  outputType?: string;
+  format?: string;
+  model?: string;
+  status?: string;
+  createdAt?: string;
 }
 
 export interface GenerationResult {
@@ -84,7 +95,14 @@ export class ApiService {
 
   /** Obtiene el perfil del usuario autenticado. */
   profile(): Observable<unknown> {
-    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: ApiService.authHeaders() });
+    return this.http.get<unknown>(`${this.baseUrl}/user/me`, { headers: ApiService.authHeaders() }).pipe(timeout({ first: 12000 }));
+  }
+
+  /** Obtiene el historial de prompts del usuario autenticado. */
+  promptHistory(): Observable<PromptHistoryEntry[]> {
+    return this.http.get<PromptHistoryEntry[]>(`${this.baseUrl}/history/me`, {
+      headers: ApiService.authHeaders(),
+    }).pipe(timeout({ first: 10000 }));
   }
 
   /** Envía un prompt al proveedor de generación seleccionado. */
