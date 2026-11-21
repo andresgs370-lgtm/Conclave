@@ -30,6 +30,8 @@ export class Perfilcomponent implements OnInit {
   history: PromptHistoryEntry[] = [];
   profileError = '';
   historyError = '';
+  private readonly textoVacio = '';
+  private readonly locale = 'en-US';
 
   constructor(private readonly api: ApiService) {}
 
@@ -68,12 +70,14 @@ export class Perfilcomponent implements OnInit {
   }
 
   /** Devuelve un texto alternativo cuando el valor está vacío. */
-  mostrarValor = (valor: string | null | undefined, alternativa: string): string =>
-    valor || alternativa;
+  mostrarValor(valor: string | null | undefined, alternativa: string): string {
+    return valor || alternativa || this.textoVacio;
+  }
 
   /** Devuelve la fecha del registro con el formato utilizado en el historial. */
-  mostrarFecha = (fecha: string | null | undefined): string =>
-    fecha ? formatDate(fecha, 'dd/MM/yyyy, HH:mm', 'en-US') : 'Fecha no disponible';
+  mostrarFecha(fecha: string | null | undefined): string {
+    return fecha ? formatDate(fecha, 'dd/MM/yyyy, HH:mm', this.locale) : 'Fecha no disponible';
+  }
 
   /** Indica si la cuenta debe mostrarse como activa. */
   cuentaActiva(): string {
@@ -91,8 +95,9 @@ export class Perfilcomponent implements OnInit {
   }
 
   /** Indica si un registro contiene un formato definido. */
-  tieneFormato = (item: PromptHistoryEntry): boolean =>
-    Boolean(item.format);
+  tieneFormato(item: PromptHistoryEntry): boolean {
+    return Boolean(item.format ?? this.textoVacio);
+  }
 
   /**
    * Convierte los errores HTTP en mensajes comprensibles para el usuario.
