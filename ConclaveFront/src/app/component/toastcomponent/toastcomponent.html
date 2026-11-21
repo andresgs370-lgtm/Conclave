@@ -1,5 +1,5 @@
 <div class="toast-stack" aria-live="polite">
-  <div class="toast-item animate__animated animate__fadeInUp" *ngFor="let toast of generacion.toasts"
+  <div class="toast-item animate__animated animate__fadeInUp" *ngFor="let toast of generacion.toasts()"
        [class.toast-ok]="toast.exito" [class.toast-fail]="!toast.exito">
     <span class="toast-text">{{ toast.mensaje }}</span>
     <a class="toast-link" [routerLink]="toast.ruta" (click)="generacion.cerrarToast(toast.id)">Ver</a>

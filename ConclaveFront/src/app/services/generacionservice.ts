@@ -1,4 +1,4 @@
-import { ApplicationRef, Injectable } from '@angular/core';
+import { ApplicationRef, Injectable, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
@@ -62,8 +62,11 @@ export class GeneracionService {
   /** Avisa a los componentes qué tipo de generación cambió de estado. */
   readonly cambios$ = new Subject<TipoGeneracion>();
 
-  /** Toasts visibles actualmente. */
-  toasts: Toast[] = [];
+  /**
+   * Toasts visibles actualmente. Es un signal para que el componente de avisos se repinte
+   * solo, aunque la aplicación no use zone.js y los componentes sean OnPush.
+   */
+  readonly toasts = signal<Toast[]>([]);
 
   /** Identificador incremental de los toasts. */
   private siguienteId = 1;
@@ -102,8 +105,7 @@ export class GeneracionService {
     estado.resultados = [];
     estado.error = '';
     this.notificar(tipo);
-    this.api.generate(prompt, tipo, opciones.format, opciones.imageProvider, opciones.videoProvider,
-      undefined, opciones.audioProvider).subscribe({
+    this.api.generate(prompt, tipo, opciones).subscribe({
       next: respuesta => this.terminar(tipo, Array.isArray(respuesta) ? respuesta : [], ''),
       error: (e: HttpErrorResponse) => this.terminar(tipo, Array.isArray(e.error) ? e.error : [],
         GeneracionService.mensajeError(e)),
@@ -126,7 +128,7 @@ export class GeneracionService {
    * @param id identificador del toast
    */
   cerrarToast(id: number): void {
-    this.toasts = this.toasts.filter(toast => toast.id !== id);
+    this.toasts.update(lista => lista.filter(toast => toast.id !== id));
     this.refrescar();
   }
 
@@ -139,16 +141,37 @@ export class GeneracionService {
    */
   private terminar(tipo: TipoGeneracion, resultados: GenerationResult[], error: string): void {
     const exito = resultados.some(resultado => resultado.status === 'SUCCESS');
-    const fallo = resultados.find(resultado => resultado.status !== 'SUCCESS');
     const estado = this.estados[tipo];
     estado.cargando = false;
     estado.resultados = resultados;
-    estado.error = exito ? '' : fallo?.errorMessage || error || 'La generación no pudo completarse.';
-    const { ruta, nombre } = GeneracionService.info[tipo];
-    if (!this.router.url.startsWith(ruta)) {
-      this.mostrarToast(exito ? `Tu ${nombre} ya está lista.` : `No se pudo generar tu ${nombre}.`, ruta, exito);
-    }
+    estado.error = exito ? '' : GeneracionService.mensajeFallo(resultados, error);
+    this.avisarSiEstaFuera(tipo, exito);
     this.notificar(tipo);
+  }
+
+  /**
+   * Elige el mensaje de error de una generación fallida.
+   *
+   * @param resultados respuestas de las IA
+   * @param error mensaje de error de la petición
+   * @returns mensaje de la IA, de la petición o uno genérico, en ese orden
+   */
+  private static mensajeFallo(resultados: GenerationResult[], error: string): string {
+    const fallo = resultados.find(resultado => resultado.status !== 'SUCCESS');
+    return [fallo?.errorMessage, error].find(Boolean) ?? 'La generación no pudo completarse.';
+  }
+
+  /**
+   * Muestra un toast si el usuario no está en la página del tipo de contenido generado.
+   *
+   * @param tipo tipo de contenido
+   * @param exito indica si la generación terminó correctamente
+   */
+  private avisarSiEstaFuera(tipo: TipoGeneracion, exito: boolean): void {
+    const { ruta, nombre } = GeneracionService.info[tipo];
+    if (this.router.url.startsWith(ruta)) return;
+    const mensaje = exito ? `Tu ${nombre} ya está lista.` : `No se pudo generar tu ${nombre}.`;
+    this.mostrarToast(mensaje, ruta, exito);
   }
 
   /**
@@ -160,7 +183,7 @@ export class GeneracionService {
    */
   private mostrarToast(mensaje: string, ruta: string, exito: boolean): void {
     const id = this.siguienteId++;
-    this.toasts = [...this.toasts, { id, mensaje, ruta, exito }];
+    this.toasts.update(lista => [...lista, { id, mensaje, ruta, exito }]);
     setTimeout(() => this.cerrarToast(id), GeneracionService.duracionToast);
   }
 
@@ -195,10 +218,24 @@ export class GeneracionService {
    * @returns mensaje de error
    */
   private static mensajeError(e: HttpErrorResponse): string {
-    if (e.status === 0) return 'No fue posible conectar con el backend.';
-    if (e.status === 503) return 'Falta configurar la API key del proveedor en el panel de administración.';
-    if (typeof e.error === 'string' && e.error.trim()) return e.error;
-    const mensaje = (e.error as { message?: unknown } | null)?.message;
-    return typeof mensaje === 'string' ? mensaje : `Error HTTP ${e.status}`;
+    return GeneracionService.mensajesPorEstado[e.status] ?? GeneracionService.mensajeDelBackend(e);
+  }
+
+  /** Mensajes fijos para los códigos HTTP más comunes. */
+  private static readonly mensajesPorEstado: Record<number, string> = {
+    0: 'No fue posible conectar con el backend.',
+    503: 'Falta configurar la API key del proveedor en el panel de administración.',
+  };
+
+  /**
+   * Extrae el mensaje que envió el backend, como texto o en el campo {@code message}.
+   *
+   * @param e error de la petición
+   * @returns mensaje del backend o el código HTTP
+   */
+  private static mensajeDelBackend(e: HttpErrorResponse): string {
+    const cuerpo = e.error as string | { message?: unknown } | null;
+    const mensaje = typeof cuerpo === 'string' ? cuerpo.trim() : cuerpo?.message;
+    return typeof mensaje === 'string' && mensaje ? mensaje : `Error HTTP ${e.status}`;
   }
 }

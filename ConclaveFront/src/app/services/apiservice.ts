@@ -41,6 +41,15 @@ export interface GenerationResult {
   format?: string;
 }
 
+/** Proveedor, modelo y formato opcionales de una generación. */
+export interface OpcionesGenerate {
+  format?: string;
+  imageProvider?: string;
+  videoProvider?: string;
+  videoModel?: string;
+  audioProvider?: string;
+}
+
 /** Servicio para comunicación HTTP con el backend de Conclave. */
 @Injectable({ providedIn: 'root' })
 export class Apiservice {
@@ -136,28 +145,38 @@ export class Apiservice {
       { headers: Apiservice.authHeaders(), responseType: 'text' });
   }
 
-  /** Envía un prompt al proveedor de generación seleccionado. */
-  generate(
-    promptText: string,
-    outputType: string,
-    format?: string,
-    imageProvider?: string,
-    videoProvider?: string,
-    videoModel?: string,
-    audioProvider?: string,
-  ): Observable<GenerationResult[]> {
-    const payload = {
-      promptText,
-      outputType,
-      format: format ?? null,
-      imageProvider: imageProvider ?? null,
-      videoProvider: videoProvider ?? null,
-      videoModel: videoModel ?? null,
-      audioProvider: audioProvider ?? null,
-    };
+  /**
+   * Envía un prompt al proveedor de generación seleccionado.
+   *
+   * @param promptText texto del usuario
+   * @param outputType tipo de contenido: IMAGE, VIDEO o AUDIO
+   * @param opciones proveedor, modelo y formato elegidos; los que falten se envían como {@code null}
+   * @returns respuestas de las IA
+   */
+  generate(promptText: string, outputType: string, opciones: OpcionesGenerate = {}): Observable<GenerationResult[]> {
+    const payload = { ...Apiservice.opcionesVacias, ...Apiservice.sinIndefinidos(opciones), promptText, outputType };
     return this.http.post<GenerationResult[]>(`${this.baseUrl}/prompt/generar`, payload, {
       headers: Apiservice.authHeaders(),
     });
+  }
+
+  /** Valores por defecto de las opciones de generación. */
+  private static readonly opcionesVacias: Record<keyof OpcionesGenerate, null> = {
+    format: null,
+    imageProvider: null,
+    videoProvider: null,
+    videoModel: null,
+    audioProvider: null,
+  };
+
+  /**
+   * Quita las opciones sin valor para que conserven el {@code null} por defecto.
+   *
+   * @param opciones opciones recibidas
+   * @returns opciones que sí tienen valor
+   */
+  private static sinIndefinidos(opciones: OpcionesGenerate): OpcionesGenerate {
+    return Object.fromEntries(Object.entries(opciones).filter(([, valor]) => valor !== undefined));
   }
 
   /** Construye los encabezados de autenticación si existe una sesión. */

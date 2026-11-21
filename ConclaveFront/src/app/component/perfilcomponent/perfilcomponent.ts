@@ -119,7 +119,7 @@ export class Perfilcomponent implements OnInit {
       next: () => {
         this.guardandoKey = false;
         this.keyEditando = null;
-        this.keyMensaje = 'API key de ' + provider + ' actualizada.';
+        this.keyMensaje = `API key de ${provider} actualizada.`;
         this.cargarKeys();
       },
       error: () => {
