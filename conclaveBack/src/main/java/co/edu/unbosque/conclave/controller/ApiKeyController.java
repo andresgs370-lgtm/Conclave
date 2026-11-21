@@ -32,7 +32,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/admin/apikey")
-@CrossOrigin(origins = {"http://localhost:8080"})//Acá va la url del front
+@CrossOrigin(origins = {"http://localhost:8080"})
 @Transactional
 @Tag(name = "Gestión de API Keys",
 		description = "Endpoints para administrar las API keys de los proveedores de IA")
@@ -86,7 +86,7 @@ public class ApiKeyController {
 	@Operation(
 			summary = "Actualizar API key de un proveedor",
 			description = """
-					Actualiza la clave y/o el estado activo del proveedor indicado. Para CLOUDFLARE, `newKey` debe contener `ACCOUNT_ID|API_TOKEN`. Para AGNES_AI, `newKey` debe ser el token de Agnes AI. Para FAL_AI, KINOVI_AI y REPLICATE, `newKey` es el token de cada servicio.
+					Actualiza la clave y/o el estado activo del proveedor indicado. Para CLOUDFLARE, `newKey` debe contener `ACCOUNT_ID|API_TOKEN`. Para los modelos HF_*, `newKey` es el token de Hugging Face. Para los demás proveedores, `newKey` es el token o API key de cada servicio.
 
 					- Si `newKey` está presente, se cifra con AES antes de persistirla.
 					- Si `active` está presente, se cambia el estado de la clave.
@@ -148,7 +148,7 @@ public class ApiKeyController {
 	@PutMapping("/setenabled/{provider}")
 	ResponseEntity<String> setActive(
 			@Parameter(description = "Proveedor de IA", required = true,
-					example = "AGNES_AI")
+					example = "CLOUDFLARE")
 			@PathVariable AIProvider provider,
 			@Parameter(description = "true = activar, false = desactivar",
 					required = true, example = "true")

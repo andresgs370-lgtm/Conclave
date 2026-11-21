@@ -4,15 +4,12 @@ package co.edu.unbosque.conclave.model;
  * Proveedores externos utilizados para generar contenido multimedia.
  */
 public enum AIProvider {
-    OPENROUTER("OpenRouter (legacy)"),
-    GEMINI("Google Gemini"),
+    /** Generación de imágenes con varios modelos a través de OpenRouter. */
+    OPENROUTER("OpenRouter (Imágenes)"),
+    /** Generación de imágenes y voz con Google Gemini. */
+    GEMINI("Google Gemini (Imágenes y sonido)"),
+    /** Generación de imágenes con FLUX y voz con Deepgram Aura en Cloudflare Workers AI. */
     CLOUDFLARE("Cloudflare Workers AI (Imágenes y sonido)"),
-    JSON2VIDEO("JSON2Video (legacy)"),
-    AGNES_AI("Agnes AI (Video Generation)"),
-    FAL_AI("fal.ai (Video Generation)"),
-    KINOVI_AI("Kinovi AI (Video Generation)"),
-    REPLICATE("Replicate (Video Generation)"),
-    HUGGINGFACE("Hugging Face (Video Generation)"),
     /** Modelo MiniMax H3 FlashGen de texto a video alojado en Hugging Face. */
     HF_MINIMAX_H3("Hugging Face · MiniMax H3 FlashGen"),
     /** Modelo MiniMax H3 Turbo de texto a video con audio alojado en Hugging Face. */
