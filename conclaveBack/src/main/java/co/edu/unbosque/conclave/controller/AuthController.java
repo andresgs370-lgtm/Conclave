@@ -196,6 +196,36 @@ public class AuthController {
 	}
 
 	/**
+	 * Reenvía el codigo de verificacion al correo del usuario.
+	 * Util cuando el codigo anterior expiro o no llego.
+	 *
+	 * @param dto DTO con el email del usuario
+	 * @return 200 si el correo fue enviado, 404 si el usuario no existe
+	 */
+	@Operation(
+			summary = "Reenviar codigo de verificacion",
+			description = "Genera un nuevo codigo y lo envia al correo del usuario. "
+					+ "Usar cuando el codigo anterior expiro.")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Codigo reenviado al correo"),
+			@ApiResponse(responseCode = "404", description = "Usuario no encontrado"),
+			@ApiResponse(responseCode = "500", description = "Error al enviar el correo")
+	})
+	@PostMapping("/reenviar-codigo")
+	public ResponseEntity<?> reenviarCodigo(
+			@RequestBody VerificacionDTO dto) {
+
+		int result = emailAuthService.enviarCodigoRegistro(dto.getEmail());
+		return switch (result) {
+			case 0 -> ResponseEntity.ok("Codigo reenviado. Revisa tu correo.");
+			case 1 -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+					.body("No existe una cuenta con ese correo.");
+			default -> ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("No se pudo enviar el correo. Intenta de nuevo.");
+		};
+	}
+
+	/**
 	 * Verifica el codigo de registro enviado al correo del usuario.
 	 * Si es correcto y no ha expirado, activa la cuenta.
 	 *
@@ -291,4 +321,3 @@ public class AuthController {
 	}
 
 }
-
