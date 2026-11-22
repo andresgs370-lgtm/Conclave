@@ -1,22 +1,21 @@
 # Conclave
 
-Conclave es una aplicación web para generar contenido multimedia mediante proveedores externos de inteligencia artificial. El proyecto está dividido en un frontend desarrollado con Angular y un backend desarrollado con Spring Boot.
+Conclave is a web application for generating multimedia content through external artificial intelligence providers. The project consists of an Angular frontend and a Spring Boot backend.
 
-## Contenido
+## Table of Contents
 
-- [Tecnologías](#tecnologías)
-- [Estructura del proyecto](#estructura-del-proyecto)
-- [Funcionalidades](#funcionalidades)
-- [Proveedores de generación](#proveedores-de-generación)
-- [Seguridad y roles](#seguridad-y-roles)
-- [API REST](#api-rest)
-- [Requisitos](#requisitos)
-- [Configuración](#configuración)
-- [Ejecución](#ejecución)
-- [Documentación de la API](#documentación-de-la-api)
-- [Consideraciones del estado actual](#consideraciones-del-estado-actual)
+- [Technologies](#technologies)
+- [Project Structure](#project-structure)
+- [Features](#features)
+- [AI Providers](#ai-providers)
+- [Security and Roles](#security-and-roles)
+- [REST API](#rest-api)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [Running the Project](#running-the-project)
+- [API Documentation](#api-documentation)
 
-## Tecnologías
+## Technologies
 
 ### Frontend
 
@@ -40,11 +39,10 @@ Conclave es una aplicación web para generar contenido multimedia mediante prove
 - Gson
 - JJWT 0.12.6
 - MySQL Connector/J
-- H2 (dependencia de ejecución incluida en el proyecto)
 
-## Estructura del proyecto
+## Project Structure
 
-El repositorio contiene dos aplicaciones independientes:
+The repository contains two independent applications:
 
 ```text
 .
@@ -79,158 +77,150 @@ El repositorio contiene dos aplicaciones independientes:
 
 ### Backend
 
-El backend organiza sus responsabilidades en los siguientes paquetes:
+The backend follows a layered structure:
 
-- `configuration`: configuración de ejecución, carga inicial de datos y documentación OpenAPI.
-- `controller`: endpoints HTTP de la aplicación.
-- `dto`: objetos utilizados para recibir y devolver información.
-- `exception`: excepciones y manejo global de errores.
-- `model`: entidades y enumeraciones del dominio.
-- `repository`: acceso a los datos mediante repositorios.
-- `security`: configuración de Spring Security y autenticación JWT.
-- `service`: lógica de negocio, autenticación por correo, gestión de API keys y comunicación con proveedores.
-- `util`: utilidades, incluido el cifrado AES.
+- `configuration`: application configuration, database initialization, asynchronous execution, and OpenAPI setup.
+- `controller`: REST endpoints.
+- `dto`: objects used to receive and return data.
+- `exception`: custom exceptions and centralized error handling.
+- `model`: application entities and enumerations.
+- `repository`: data access interfaces.
+- `security`: Spring Security configuration and JWT authentication.
+- `service`: business logic, email authentication, API key management, and communication with AI providers.
+- `util`: utility classes, including AES encryption.
 
 ### Frontend
 
-La aplicación Angular contiene componentes para las páginas y elementos de interfaz, además de servicios para la comunicación con el backend, la autenticación y la gestión de las generaciones.
+The Angular application is organized around UI components and services responsible for communication with the backend, authentication, and generation workflows.
 
-Entre sus componentes se encuentran las páginas de inicio, modelos, inicio de sesión, registro, verificación, recuperación de contraseña, generación de imágenes, videos y sonido, perfil y administración.
+Its components cover the home page, models, login, registration, account verification, password recovery, image generation, video generation, sound generation, profile, and administration.
 
-## Funcionalidades
+## Features
 
-Según la implementación incluida en el proyecto, Conclave cuenta con las siguientes funcionalidades:
+Conclave includes the following features:
 
-- Registro de usuarios.
-- Inicio de sesión.
-- Verificación de cuenta mediante un código enviado por correo.
-- Reenvío del código de verificación.
-- Solicitud y confirmación del restablecimiento de contraseña.
-- Consulta del perfil del usuario autenticado.
-- Generación de imágenes.
-- Generación de videos.
-- Generación de audio.
-- Consulta del historial de prompts.
-- Consulta administrativa del historial.
-- Consulta y actualización de las API keys de proveedores desde el área de administración.
-- Gestión administrativa de usuarios.
-- Manejo centralizado de errores de la API.
+- User registration.
+- User login.
+- Email-based account verification.
+- Verification code resending.
+- Password reset requests and confirmation.
+- Authenticated user profile retrieval.
+- AI image generation.
+- AI video generation.
+- AI audio generation.
+- Personal prompt history.
+- Administrative prompt history.
+- Provider API key management.
+- Administrative user management.
+- Centralized API error handling.
 
-La generación se solicita mediante el endpoint `POST /prompt/generar`. El servicio del frontend mantiene en memoria el estado de la última generación de cada tipo mientras la aplicación permanece abierta. El código del servicio indica que los resultados multimedia de esa sesión no se conservan en la base de datos del navegador y se pierden al recargar la página.
+Content generation is requested through the `POST /prompt/generar` endpoint.
 
-## Proveedores de generación
+## AI Providers
 
-El backend declara los siguientes proveedores en `AIProvider`:
+The backend defines the following providers through the `AIProvider` enumeration:
 
-| Proveedor | Uso declarado en el proyecto |
+| Provider | Supported generation types |
 |---|---|
-| OpenRouter | Imágenes |
-| Google Gemini | Imágenes y sonido |
-| Cloudflare Workers AI | Imágenes y sonido |
+| OpenRouter | Images |
+| Google Gemini | Images and sound |
+| Cloudflare Workers AI | Images and sound |
 | Hugging Face – MiniMax H3 FlashGen | Video |
 | Hugging Face – MiniMax H3 Turbo | Video |
 | Hugging Face – Omni Video | Video |
 | Hugging Face – ModelScope Text-to-Video | Video |
-| Pollinations.ai | Imágenes; la API key es opcional |
-| Together AI | Imágenes |
-| ElevenLabs | Sonido |
+| Pollinations.ai | Images |
+| Together AI | Images |
+| ElevenLabs | Sound |
 
-Los proveedores disponibles dependen del tipo de contenido solicitado y de la configuración de sus credenciales. El backend también permite administrar las API keys desde los endpoints administrativos correspondientes.
+Provider availability depends on the requested content type and the corresponding provider configuration. Provider API keys can be managed through the administrative endpoints.
 
-## Seguridad y roles
+## Security and Roles
 
-La seguridad del backend está implementada con Spring Security y tokens JWT.
+The backend uses Spring Security and JSON Web Tokens (JWT) for authentication.
 
-- La API utiliza una configuración sin estado (`STATELESS`).
-- Las contraseñas se codifican mediante BCrypt.
-- Las rutas de autenticación bajo `/auth/**` son públicas.
-- La documentación Swagger está configurada como pública.
-- `/user/me`, `/prompt/**` y `/history/me` permiten acceso a usuarios con rol `USER` o `ADMIN`.
-- Las rutas `/user/**`, `/admin/**` y `/history/**` requieren el rol `ADMIN`, con la excepción específica de `/user/me` y `/history/me` indicada en las reglas anteriores.
-- Las demás rutas requieren autenticación.
+- The API uses stateless session management.
+- Passwords are encoded using BCrypt.
+- Authentication endpoints under `/auth/**` are publicly accessible.
+- Swagger and OpenAPI documentation routes are publicly accessible.
+- `/user/me`, `/prompt/**`, and `/history/me` are accessible to users with the `USER` or `ADMIN` role.
+- Administrative user and history routes require the `ADMIN` role, subject to the specific access rules configured for `/user/me` and `/history/me`.
+- Other routes require authentication.
 
-El frontend guarda el token de sesión en `localStorage` bajo la clave `conclave_token` y lo envía en el encabezado `Authorization` con el esquema `Bearer`.
+The frontend stores the session token in `localStorage` using the `conclave_token` key and sends it through the `Authorization` header with the `Bearer` scheme.
 
-## API REST
+## REST API
 
-Los siguientes endpoints corresponden a los mappings declarados en los controladores del backend.
+The following endpoints are declared by the backend controllers.
 
-| Método | Ruta | Descripción |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/auth/login` | Iniciar sesión. |
-| `POST` | `/auth/register` | Registrar una cuenta. |
-| `POST` | `/auth/reenviar-codigo` | Reenviar el código de verificación. |
-| `POST` | `/auth/verificar-registro` | Verificar el registro. |
-| `POST` | `/auth/solicitar-reset` | Solicitar el restablecimiento de contraseña. |
-| `POST` | `/auth/confirmar-reset` | Confirmar el restablecimiento de contraseña. |
-| `GET` | `/user/me` | Consultar el perfil del usuario autenticado. |
-| `POST` | `/user/createjson` | Crear un usuario mediante JSON. |
-| `GET` | `/user/getall` | Consultar todos los usuarios. |
-| `GET` | `/user/count` | Consultar la cantidad de usuarios. |
-| `GET` | `/user/exists/{id}` | Comprobar si existe un usuario por ID. |
-| `GET` | `/user/getbyid/{id}` | Consultar un usuario por ID. |
-| `PUT` | `/user/updatejson` | Actualizar un usuario mediante JSON. |
-| `PUT` | `/user/setenabled/{id}` | Cambiar el estado habilitado de un usuario. |
-| `DELETE` | `/user/deletebyid/{id}` | Eliminar un usuario por ID. |
-| `POST` | `/prompt/generar` | Solicitar una generación de contenido. |
-| `GET` | `/history/me` | Consultar el historial del usuario autenticado. |
-| `GET` | `/history` | Consultar el historial completo. |
-| `GET` | `/history/user/{id}` | Consultar el historial de un usuario por ID. |
-| `GET` | `/admin/apikey/getall` | Consultar las API keys registradas, enmascaradas. |
-| `PUT` | `/admin/apikey/update/{provider}` | Actualizar la API key y el estado de un proveedor. |
-| `PUT` | `/admin/apikey/setenabled/{provider}` | Cambiar el estado habilitado de un proveedor. |
+| `POST` | `/auth/login` | Authenticate a user. |
+| `POST` | `/auth/register` | Register a new account. |
+| `POST` | `/auth/reenviar-codigo` | Resend the account verification code. |
+| `POST` | `/auth/verificar-registro` | Verify an account registration. |
+| `POST` | `/auth/solicitar-reset` | Request a password reset. |
+| `POST` | `/auth/confirmar-reset` | Confirm a password reset. |
+| `GET` | `/user/me` | Retrieve the authenticated user's profile. |
+| `POST` | `/user/createjson` | Create a user from JSON data. |
+| `GET` | `/user/getall` | Retrieve all users. |
+| `GET` | `/user/count` | Retrieve the number of users. |
+| `GET` | `/user/exists/{id}` | Check whether a user exists. |
+| `GET` | `/user/getbyid/{id}` | Retrieve a user by ID. |
+| `PUT` | `/user/updatejson` | Update a user from JSON data. |
+| `PUT` | `/user/setenabled/{id}` | Change a user's enabled status. |
+| `DELETE` | `/user/deletebyid/{id}` | Delete a user by ID. |
+| `POST` | `/prompt/generar` | Request content generation. |
+| `GET` | `/history/me` | Retrieve the authenticated user's prompt history. |
+| `GET` | `/history` | Retrieve the complete prompt history. |
+| `GET` | `/history/user/{id}` | Retrieve a user's prompt history by user ID. |
+| `GET` | `/admin/apikey/getall` | Retrieve registered provider API keys in masked form. |
+| `PUT` | `/admin/apikey/update/{provider}` | Update a provider API key and its enabled status. |
+| `PUT` | `/admin/apikey/setenabled/{provider}` | Change a provider's enabled status. |
 
-Los endpoints administrativos están protegidos por rol `ADMIN`, de acuerdo con la configuración de seguridad del backend.
+Administrative endpoints are protected by the `ADMIN` role according to the backend security configuration.
 
-## Requisitos
-
-Para trabajar con el proyecto se necesita:
+## Requirements
 
 - Java 21.
-- Node.js y npm compatibles con la versión de Angular utilizada por el proyecto.
-- Una base de datos compatible con la configuración de Spring Data JPA. El proyecto incluye el controlador JDBC de MySQL.
-- Credenciales de correo para las funciones de verificación y recuperación de contraseña.
-- Las credenciales de los proveedores externos que se quieran utilizar.
+- Node.js and npm compatible with the Angular version used by the project.
+- A MySQL database.
+- Email account settings for account verification and password recovery.
+- API credentials for the external providers you intend to use.
 
-El backend incluye Maven Wrapper (`mvnw` y `mvnw.cmd`), por lo que no es necesario instalar Maven globalmente para ejecutar los comandos mediante el wrapper.
+The backend includes Maven Wrapper scripts (`mvnw` and `mvnw.cmd`), so a global Maven installation is not required.
 
-## Configuración
+## Configuration
 
 ### Backend
 
-El archivo de configuración se encuentra en:
+Backend configuration is managed through:
 
 ```text
 conclaveBack/src/main/resources/application.properties
 ```
 
-En la copia del proyecto utilizada para este README, ese archivo está vacío. Por tanto, antes de ejecutar el backend se deben definir allí los parámetros de conexión a la base de datos y los valores de configuración que requiera el entorno.
+Set the environment-specific database, email, and security properties required by the application.
 
-El código de `EmailService` requiere la propiedad:
+The email service uses the `app.mail.from` property to define the sender address. JWT signing uses the `jwt.secret` property.
 
-```properties
-app.mail.from=REMITENTE_CONFIGURADO
-```
-
-También se utiliza la propiedad `jwt.secret`. El código declara un valor predeterminado para esta propiedad, pero para un despliegue propio se debe configurar una clave secreta adecuada.
-
-Las API keys de los proveedores se gestionan desde la funcionalidad administrativa de la aplicación. No se incluyen credenciales reales en este README.
+Provider API keys are managed through the application's administrative functionality. Do not commit private credentials or secrets to the repository.
 
 ### Frontend
 
-El servicio `Apiservice` tiene configurada directamente esta URL base:
-
-```text
-https://gpcueb.org/conclave-0.0.1-SNAPSHOT
-```
-
-Por ello, el frontend apunta a esa dirección en su estado actual. Para utilizar un backend local o una instalación diferente, se debe cambiar la URL base en:
+The Angular API service defines the backend base URL in:
 
 ```text
 front/src/app/services/apiservice.ts
 ```
 
-El backend configura CORS para los siguientes orígenes:
+The configured base URL is:
+
+```text
+https://gpcueb.org/conclave-0.0.1-SNAPSHOT
+```
+
+The backend CORS configuration includes the following origins:
 
 - `http://localhost:8080`
 - `http://localhost:8081`
@@ -238,98 +228,87 @@ El backend configura CORS para los siguientes orígenes:
 - `http://localhost:4200`
 - `https://conclaveia.netlify.app`
 
-Si se utiliza otro origen para el frontend, deberá ajustarse la configuración CORS del backend.
+If the frontend is served from a different origin, that origin can be added to the backend CORS configuration.
 
-## Ejecución
+## Running the Project
 
-Los comandos siguientes se ejecutan desde las carpetas indicadas.
+Run the backend and frontend in separate terminals.
 
 ### 1. Backend
 
-Entrar en la carpeta:
+Open a terminal in the backend directory:
 
 ```bash
 cd conclaveBack
 ```
 
-En Windows, ejecutar:
+On Windows:
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-En Linux o macOS, ejecutar:
+On Linux or macOS:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Para generar el artefacto:
+To package the backend:
 
 ```bash
 ./mvnw clean package
 ```
 
-En Windows:
+On Windows:
 
 ```powershell
 .\mvnw.cmd clean package
 ```
 
-Antes de iniciar el backend, configurar `application.properties` con los datos del entorno. La copia del proyecto contiene ese archivo vacío, por lo que no se puede asumir que el backend arrancará sin configuración adicional.
-
 ### 2. Frontend
 
-En otra terminal, entrar en la carpeta:
+Open another terminal in the frontend directory:
 
 ```bash
 cd front
 ```
 
-Instalar las dependencias:
+Install the dependencies:
 
 ```bash
 npm install
 ```
 
-Iniciar el servidor de desarrollo:
+Start the Angular development server:
 
 ```bash
 npm start
 ```
 
-El script `start` ejecuta `ng serve`. La configuración de Angular establece el modo de desarrollo como configuración predeterminada para este servidor.
+The `start` script runs `ng serve`.
 
-Para generar la compilación de producción:
+To create a production build:
 
 ```bash
 npm run build
 ```
 
-Para ejecutar las pruebas configuradas:
+To run the configured tests:
 
 ```bash
 npm test
 ```
 
-## Documentación de la API
+## API Documentation
 
-El backend incluye Springdoc OpenAPI y una configuración personalizada de la documentación.
+The backend uses Springdoc OpenAPI with a custom documentation configuration.
 
-Con el backend en ejecución, las rutas habituales de la interfaz y el documento OpenAPI son:
+When the backend is running, the Swagger UI and OpenAPI document are available at:
 
 ```text
 /swagger-ui/index.html
 /v3/api-docs
 ```
 
-La configuración de seguridad permite el acceso público a las rutas de Swagger y OpenAPI.
-
-## Consideraciones del estado actual
-
-- El archivo `application.properties` incluido en el proyecto no contiene configuración.
-- La URL base del backend está escrita directamente en el servicio Angular `Apiservice`.
-- El proyecto incluye dependencias para MySQL y H2; la configuración efectiva de la base de datos depende de los parámetros que se definan en el entorno.
-- Las API keys de proveedores externos no se documentan aquí ni se deben publicar en el repositorio.
-- El estado de las generaciones en el frontend se conserva en memoria durante la sesión de la aplicación; el servicio indica que ese estado se pierde al recargar la página.
-
+The backend security configuration allows public access to the Swagger and OpenAPI routes.
