@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Subscription, filter } from 'rxjs';
 import { GenerationResult as ApiGenerationResult } from '../../services/apiservice';
 import { GeneracionService } from '../../services/generacionservice';
@@ -36,8 +36,9 @@ export class Imagencomponent implements OnDestroy {
    * Recupera la última generación de imágenes y escucha sus cambios.
    *
    * @param generacion servicio global de generación
+   * @param cdr detector de cambios, para repintar la vista cuando llega el resultado
    */
-  constructor(private generacion: GeneracionService) {
+  constructor(private generacion: GeneracionService, private cdr: ChangeDetectorRef) {
     this.prompt = generacion.estado('IMAGE').prompt;
     this.sincronizar();
     this.suscripcion = generacion.cambios$
@@ -93,6 +94,7 @@ export class Imagencomponent implements OnDestroy {
     this.loading = estado.cargando;
     this.error = estado.error;
     this.results = Imagencomponent.normalizeResults(estado.resultados);
+    this.cdr.markForCheck();
   }
 
   /** Agrega el tipo de contenido y la clase de estado a cada resultado. */
