@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Authservice } from '../../services/authservice';
 
 /**
@@ -15,9 +16,17 @@ import { Authservice } from '../../services/authservice';
 export class Paginaprincipalcomponent {
 
   /**
-   * Inyecta el servicio de sesión para saber si el usuario ya inició sesión.
+   * Nombre del usuario con sesión iniciada, o {@code null} si no hay sesión.
+   * Es un signal para que la vista se actualice sola al iniciar o cerrar sesión.
+   */
+  readonly usuario;
+
+  /**
+   * Inyecta el servicio de sesión y convierte el nombre del usuario en un signal.
    *
    * @param auth servicio de sesión
    */
-  constructor(public auth: Authservice) {}
+  constructor(auth: Authservice) {
+    this.usuario = toSignal(auth.username$, { initialValue: null });
+  }
 }
