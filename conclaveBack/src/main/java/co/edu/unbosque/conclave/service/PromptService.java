@@ -808,7 +808,7 @@ public class PromptService {
 
             HttpResponse<String> result = get(endpoint + "/" + enc(eventId), Map.of("Authorization", "Bearer " + token));
             if (!ok(result)) return failed(dto, "Hugging Face resultado: " + error(result));
-            return parseGradioStream(result.body(), dto, start);
+            return parseGradioStream(result.body(), dto, start, token);
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Hugging Face video generation failed", e);
             return failed(base(provider, space, 500, start), "Error Hugging Face: " + e.getMessage());
@@ -821,9 +821,10 @@ public class PromptService {
      * @param stream cuerpo de la respuesta del Space
      * @param dto respuesta que se actualizará con el resultado
      * @param start instante en que inició la generación
+     * @param token token de Hugging Face, necesario para descargar el video del Space
      * @return respuesta con el video generado o con el detalle del fallo
      */
-    private AIResponseDTO parseGradioStream(String stream, AIResponseDTO dto, long start) {
+    private AIResponseDTO parseGradioStream(String stream, AIResponseDTO dto, long start, String token) {
         String event = null;
         for (String line : stream.split("\\r?\\n")) {
             if (line.startsWith("event:")) {
@@ -837,7 +838,7 @@ public class PromptService {
                 if ("complete".equals(event)) {
                     String url = findUrl(JsonParser.parseString(payload));
                     if (url == null) return failed(dto, "El Space terminó sin URL de video: " + payload);
-                    return successVideo(dto, url, start);
+                    return successVideo(dto, url, start, token);
                 }
             }
         }
@@ -870,11 +871,33 @@ public class PromptService {
     }
 
     /**
-     * Marca la respuesta como exitosa y establece los datos de descarga del video generado.
+     * Descarga el video generado por el Space y lo devuelve como data URL, igual que las imágenes.
+     *
+     * <p>Los Spaces de Gradio no siempre permiten abrir el archivo desde el navegador
+     * ("File not allowed"), así que el backend lo descarga con el token y lo reenvía al usuario
+     * sin guardarlo en la base de datos. Se prueban la ruta {@code /gradio_api/file=} y la ruta
+     * antigua {@code /file=}.</p>
+     *
+     * @param dto respuesta que se actualizará con el resultado
+     * @param url URL del video en el Space
+     * @param start instante en que inició la generación
+     * @param token token de Hugging Face
+     * @return respuesta con el video embebido o con el detalle del fallo
      */
-    private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start) {
+    private AIResponseDTO successVideo(AIResponseDTO dto, String url, long start, String token) {
+        Map<String, String> headers = Map.of(AUTHORIZATION, BEARER + token);
+        HttpResponse<byte[]> video = null;
+        for (String candidato : List.of(url, url.replace("/gradio_api/file=", "/file=")).stream().distinct().toList()) {
+            video = externalHandler.doGetBytesAsync(candidato, headers).join();
+            if (ok(video.statusCode())) break;
+        }
+        if (video == null || !ok(video.statusCode())) {
+            LOGGER.warning("No se pudo descargar el video del Space: " + url);
+            return failed(dto, "El Space generó el video pero no permite descargarlo ("
+                    + (video == null ? "sin respuesta" : bytesError(video)) + "). Prueba con otro modelo de video.");
+        }
         dto.setStatus(ResponseStatus.SUCCESS);
-        dto.setDownloadUrl(url);
+        dto.setDownloadUrl("data:video/mp4;base64," + Base64.getEncoder().encodeToString(video.body()));
         dto.setMimeType("video/mp4");
         dto.setFormat(MediaFormat.MP4);
         dto.setDurationMs(System.currentTimeMillis() - start);
