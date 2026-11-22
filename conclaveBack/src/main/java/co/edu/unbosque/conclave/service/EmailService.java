@@ -34,8 +34,8 @@ public class EmailService {
     /** Asunto del correo de restablecimiento de contrasena. */
     private static final String ASUNTO_RESET = "Conclave - Restablecimiento de contrasena";
 
-    /** Remitente de los correos (leido desde application.properties). */
-    @Value("${spring.mail.username}")
+    /** Remitente verificado en Brevo (leido desde app.mail.from en application.properties). */
+    @Value("${app.mail.from}") // <-- CAMBIO: antes era ${spring.mail.username}
     private String remitente;
 
     /** Componente de Spring para enviar correos. */
@@ -125,7 +125,7 @@ public class EmailService {
     /**
      * Construye el cuerpo en texto plano del correo de verificacion.
      *
-     *El diseno visual y la presentacion final del codigo al usuario
+     * El diseno visual y la presentacion final del codigo al usuario
      * es responsabilidad del frontend. Este metodo solo genera el texto
      * que viaja en el correo.
      *

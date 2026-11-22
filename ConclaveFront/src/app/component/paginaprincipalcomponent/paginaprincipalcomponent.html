@@ -8,7 +8,10 @@
     lado a lado. Más perspectivas, mejores decisiones.
   </p>
   <div class="hero-actions animate__animated animate__fadeInUp animate__delay-2s">
-    <a routerLink="/login" class="btn btn-primary btn-lg px-5">Comenzar</a>
+    <a *ngIf="usuario(); else botonComenzar" routerLink="/imagen" class="btn btn-primary btn-lg px-5">Crear contenido</a>
+    <ng-template #botonComenzar>
+      <a routerLink="/login" class="btn btn-primary btn-lg px-5">Comenzar</a>
+    </ng-template>
     <a href="#como-funciona" class="btn btn-outline-light btn-lg px-5">Cómo funciona</a>
   </div>
 </section>
@@ -32,7 +35,7 @@
       </div>
 
       <div class="carousel-item">
-        <img src="assets/slide2.jpg" class="d-blockA w-100" alt="Slide 2">
+        <img src="assets/slide2.jpg" class="d-block w-100" alt="Slide 2">
         <div class="carousel-caption d-none d-md-block">
           <h5>Compara lado a lado</h5>
           <p>Cada modelo responde en su propia columna.</p>
@@ -112,15 +115,27 @@
 </section>
 
 <section class="login-box text-center">
-  <div class="card-login animate__animated animate__zoomIn">
+  <div class="card-login animate__animated animate__zoomIn" *ngIf="usuario(); else tarjetaLogin">
     <span class="eyebrow">Tu espacio</span>
-    <h2 class="mb-2">¿Listo para empezar?</h2>
-    <p class="text-secondary mb-4">Inicia sesión y compara modelos en segundos.</p>
-    <a routerLink="/login"
-       class="btn btn-primary btn-lg px-5 animate__animated animate__pulse animate__infinite animate__slow">
-      Haz login
-    </a>
+    <h2 class="mb-2">Hola, {{ usuario() }}</h2>
+    <p class="text-secondary mb-4">Ya iniciaste sesión. ¿Qué quieres crear hoy?</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+      <a routerLink="/imagen" class="btn btn-primary btn-lg px-4">Imágenes</a>
+      <a routerLink="/video" class="btn btn-primary btn-lg px-4">Videos</a>
+      <a routerLink="/sonido" class="btn btn-primary btn-lg px-4">Sonidos</a>
+    </div>
   </div>
+  <ng-template #tarjetaLogin>
+    <div class="card-login animate__animated animate__zoomIn">
+      <span class="eyebrow">Tu espacio</span>
+      <h2 class="mb-2">¿Listo para empezar?</h2>
+      <p class="text-secondary mb-4">Inicia sesión y genera imágenes, videos y sonidos en segundos.</p>
+      <a routerLink="/login"
+         class="btn btn-primary btn-lg px-5 animate__animated animate__pulse animate__infinite animate__slow">
+        Haz login
+      </a>
+    </div>
+  </ng-template>
 </section>
 
 <section class="container features">
@@ -228,7 +243,8 @@
 <section class="cta text-center">
   <h2>Deja de adivinar cuál respuesta es mejor</h2>
   <p>Compáralas todas en un solo lugar.</p>
-  <a routerLink="/registro" class="btn btn-light btn-lg px-5">Crear mi cuenta</a>
+  <a *ngIf="usuario(); else botonRegistro" routerLink="/perfil" class="btn btn-light btn-lg px-5">Ver mi historial</a>
+  <ng-template #botonRegistro>
+    <a routerLink="/registro" class="btn btn-light btn-lg px-5">Crear mi cuenta</a>
+  </ng-template>
 </section>
-
-

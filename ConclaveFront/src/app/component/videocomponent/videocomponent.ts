@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Subscription, filter } from 'rxjs';
 import { GenerationResult } from '../../services/apiservice';
 import { GeneracionService } from '../../services/generacionservice';
@@ -40,8 +40,9 @@ export class Videocomponent implements OnDestroy {
    * Recupera la última generación de video y escucha sus cambios.
    *
    * @param generacion servicio global de generación
+   * @param cdr detector de cambios, para repintar la vista cuando llega el resultado
    */
-  constructor(private generacion: GeneracionService) {
+  constructor(private generacion: GeneracionService, private cdr: ChangeDetectorRef) {
     this.prompt = generacion.estado('VIDEO').prompt;
     this.sincronizar();
     this.suscripcion = generacion.cambios$
@@ -89,5 +90,6 @@ export class Videocomponent implements OnDestroy {
     this.loading = estado.cargando;
     this.error = estado.error;
     this.results = estado.resultados;
+    this.cdr.markForCheck();
   }
 }
